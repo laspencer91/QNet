@@ -1,0 +1,39 @@
+{
+  "resourceType": "GMProject",
+  "resourceVersion": "1.7",
+  "name": "QNet",
+  "AudioGroups": [
+    {"resourceType":"GMAudioGroup","resourceVersion":"1.3","name":"audiogroup_default","targets":-1,},
+  ],
+  "configs": {
+    "children": [],
+    "name": "Default",
+  },
+  "defaultScriptType": 1,
+  "Folders": [
+    {"resourceType":"GMFolder","resourceVersion":"1.0","name":"QNet","folderPath":"folders/QNet.yy",},
+    {"resourceType":"GMFolder","resourceVersion":"1.0","name":"Serialization","folderPath":"folders/QNet/Serialization.yy",},
+    {"resourceType":"GMFolder","resourceVersion":"1.0","name":"Utilities","folderPath":"folders/QNet/Utilities.yy",},
+  ],
+  "IncludedFiles": [],
+  "isEcma": false,
+  "LibraryEmitters": [],
+  "MetaData": {
+    "IDEVersion": "2023.8.0.98",
+  },
+  "resources": [
+    {"id":{"name":"__qnet_utils_serialization","path":"scripts/__qnet_utils_serialization/__qnet_utils_serialization.yy",},},
+    {"id":{"name":"__q_util_struct_get_variable_names","path":"scripts/__q_util_struct_get_variable_names/__q_util_struct_get_variable_names.yy",},},
+    {"id":{"name":"__qnet_macros","path":"scripts/__qnet_macros/__qnet_macros.yy",},},
+    {"id":{"name":"__qnet_serializable_registration","path":"scripts/__qnet_serializable_registration/__qnet_serializable_registration.yy",},},
+    {"id":{"name":"obj_qnet_host","path":"objects/obj_qnet_host/obj_qnet_host.yy",},},
+    {"id":{"name":"rm_qnet_test","path":"rooms/rm_qnet_test/rm_qnet_test.yy",},},
+  ],
+  "RoomOrderNodes": [
+    {"roomId":{"name":"rm_qnet_test","path":"rooms/rm_qnet_test/rm_qnet_test.yy",},},
+  ],
+  "templateType": "game",
+  "TextureGroups": [
+    {"resourceType":"GMTextureGroup","resourceVersion":"1.3","name":"Default","autocrop":true,"border":2,"compressFormat":"bz2","directory":"","groupParent":null,"isScaled":true,"loadType":"default","mipsToGenerate":0,"targets":-1,},
+  ],
+}
