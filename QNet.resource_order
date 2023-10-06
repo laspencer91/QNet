@@ -1,9 +1,9 @@
 {
   "FolderOrderSettings": [
     {"name":"QNet","order":1,"path":"folders/QNet.yy",},
+    {"name":"Logging","order":4,"path":"folders/QNet/Logging.yy",},
     {"name":"Serialization","order":1,"path":"folders/QNet/Serialization.yy",},
     {"name":"Utilities","order":2,"path":"folders/QNet/Utilities.yy",},
-    {"name":"Logging","order":4,"path":"folders/QNet/Logging.yy",},
   ],
   "ResourceOrderSettings": [
     {"name":"qnet_serialization_init","order":3,"path":"scripts/qnet_serialization_init/qnet_serialization_init.yy",},

@@ -12,9 +12,9 @@
   "defaultScriptType": 1,
   "Folders": [
     {"resourceType":"GMFolder","resourceVersion":"1.0","name":"QNet","folderPath":"folders/QNet.yy",},
+    {"resourceType":"GMFolder","resourceVersion":"1.0","name":"Logging","folderPath":"folders/QNet/Logging.yy",},
     {"resourceType":"GMFolder","resourceVersion":"1.0","name":"Serialization","folderPath":"folders/QNet/Serialization.yy",},
     {"resourceType":"GMFolder","resourceVersion":"1.0","name":"Utilities","folderPath":"folders/QNet/Utilities.yy",},
-    {"resourceType":"GMFolder","resourceVersion":"1.0","name":"Logging","folderPath":"folders/QNet/Logging.yy",},
   ],
   "IncludedFiles": [],
   "isEcma": false,

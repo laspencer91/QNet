@@ -1,7 +1,7 @@
 /**
 * Processes a recieved buffer and plays the resulting structs' OnRecieve function.
 */
-function qnet_process_packet(_buffer)
+function qnet_deserialize(_buffer)
 {
 	buffer_seek(_buffer, buffer_seek_start, 0);
 
@@ -11,7 +11,7 @@ function qnet_process_packet(_buffer)
 	var _serialization_config = global.__struct_serialization_config_map[? _serializable_id];
 	if (_serialization_config == undefined)
 	{
-		qnet_warn($"Attempted to process an unrecognized serializable_id ({_serializable_id}). If you are receiving data from external sources (networking), they could have passed incorrect data.");
+		qnet_error_quiet($"Attempted to process an unrecognized serializable_id ({_serializable_id}). If you are receiving data from external sources (networking), they could have passed incorrect data.");
 		return undefined;
 	}
 
@@ -43,9 +43,12 @@ function qnet_process_packet(_buffer)
 	else
 	{	
 		// Standard deserizalation
-		var _struct_instance = qnet_deserialize(_serializable_id, _buffer);
+		var _struct_id = _serialization_config.struct_id;
+	
+		// Get to the right place after packet_type (which is the first byte)
+		buffer_seek(_buffer, buffer_seek_start, 1);
 
-		return _struct_instance;
+		return __qnet_read_buffer_to_struct(_buffer, _struct_id);
 	}	
 }
 
@@ -192,26 +195,6 @@ function __qnet_write_struct_to_buffer(_buffer, _struct_id, _struct_instance)
 			buffer_write(_buffer, _data_type, _field_value);
 		}
 	}	
-}
-
-///@desc Read a packet using a registered layout. Will return "undefined" if no layout has been registered
-///      for the given _serializable_struct_id.
-///@param {real} _serializable_id The struct id assigned when the Struct Type was registered with qnet.
-///@param {Id.Buffer} _buffer A buffer to deserialize. Usually the received packet.
-function qnet_deserialize(_serializable_id, _buffer) 
-{
-	var _serialization_config = global.__struct_serialization_config_map[? _serializable_id];
-	if (is_undefined(_serialization_config))
-	{
-		qnet_error_quiet($"Attempting to deserialize an unrecognized serializable_id ( {_serializable_id} ). Could not find the serialization configuration for this id.");
-		return undefined;
-	}
-	var _packet_struct_id = _serialization_config.struct_id;
-	
-	// Get to the right place after packet_type (which is the first byte)
-	buffer_seek(_buffer, buffer_seek_start, 1);
-
-	return __qnet_read_buffer_to_struct(_buffer, _packet_struct_id);
 }
 
 ///TODO: This can be made recursive. To allow nested structs to be read. But we need to match it up with struct writing.

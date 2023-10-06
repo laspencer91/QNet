@@ -1,4 +1,15 @@
-function TestStruct(_x = buffer_u16, _y = buffer_u16) constructor 
+/**
+* Specify an array type with [buffer_type]
+* @example
+* function TestStruct(_x = [buffer_u16]) constructor {
+*	...
+* }
+* // This is serializable.
+* var _struct_instance = TestStruct([10, 15, 13, 12]);
+* var _buffer = qnet_serialize(_struct_inst);
+* var _recreated_struct_inst = qnet_process_buffer(_buffer);
+*/
+function TestStruct(_x = [buffer_u16], _y = buffer_u16) constructor 
 {
 	xx = _x;
 	yy = _y;
@@ -9,39 +20,10 @@ function TestStruct(_x = buffer_u16, _y = buffer_u16) constructor
 	}
 }
 
-function TestStructManual(_x = buffer_u16, _y = buffer_u16) constructor 
-{
-	MANUAL_SERIALIZATION
-	
-	xx = _x;
-	yy = _y;
 
-	OnReceive = function()
-	{
-		show_debug_message($"MANUAL !! Recieved {xx} {yy}");	
-	}
-	
-	static Write = function(_buffer)
-	{
-		show_debug_message($"{xx} {yy}");
-		buffer_write(_buffer, buffer_u16, xx);
-		buffer_write(_buffer, buffer_u16, yy);
-	}
-	
-	static Read = function(_buffer)
-	{
-		xx = buffer_read(_buffer, buffer_u16);
-		yy = buffer_read(_buffer, buffer_u16);
-	}
-}
+qnet_serialization_init([TestStruct]);
 
-qnet_serialization_init([TestStruct, TestStructManual]);
+var _buffer = qnet_serialize(new TestStruct([10, 15, 12, 6], 15));
+var _received_struct_1 = qnet_deserialize(_buffer);
 
-var _buffer = qnet_serialize(new TestStruct(10, 15));
-var _buffer_2 = qnet_serialize(new TestStructManual(11, 12));
-var _test_buff = buffer_create(3, buffer_fixed, 1);
-buffer_write(_test_buff, buffer_u8, 10);
-var _received_struct_1 = qnet_process_packet(_test_buff);
-var _received_struct_2 = qnet_process_packet(_buffer_2);
-
-_received_struct_2.OnReceive();
+_received_struct_1.OnReceive();
