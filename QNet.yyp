@@ -14,6 +14,7 @@
     {"resourceType":"GMFolder","resourceVersion":"1.0","name":"QNet","folderPath":"folders/QNet.yy",},
     {"resourceType":"GMFolder","resourceVersion":"1.0","name":"Serialization","folderPath":"folders/QNet/Serialization.yy",},
     {"resourceType":"GMFolder","resourceVersion":"1.0","name":"Utilities","folderPath":"folders/QNet/Utilities.yy",},
+    {"resourceType":"GMFolder","resourceVersion":"1.0","name":"Logging","folderPath":"folders/QNet/Logging.yy",},
   ],
   "IncludedFiles": [],
   "isEcma": false,
@@ -22,6 +23,8 @@
     "IDEVersion": "2023.8.0.98",
   },
   "resources": [
+    {"id":{"name":"qnet_serialization_init","path":"scripts/qnet_serialization_init/qnet_serialization_init.yy",},},
+    {"id":{"name":"__qnet_logging","path":"scripts/__qnet_logging/__qnet_logging.yy",},},
     {"id":{"name":"__qnet_utils_serialization","path":"scripts/__qnet_utils_serialization/__qnet_utils_serialization.yy",},},
     {"id":{"name":"__q_util_struct_get_variable_names","path":"scripts/__q_util_struct_get_variable_names/__q_util_struct_get_variable_names.yy",},},
     {"id":{"name":"__qnet_macros","path":"scripts/__qnet_macros/__qnet_macros.yy",},},
