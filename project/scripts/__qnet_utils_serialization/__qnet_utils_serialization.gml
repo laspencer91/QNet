@@ -1,13 +1,13 @@
-/**
-* Processes a recieved buffer and plays the resulting structs' OnRecieve function.
-*/
+/// @desc Deserializes data in a buffer to a registered struct instance.
+/// @param {Id.Buffer} _buffer A buffer with data to be deserialized. For example, a received network packet./
+/// @returns {Struct, undefined}
 function qnet_deserialize(_buffer)
 {
 	buffer_seek(_buffer, buffer_seek_start, 0);
 
-	// Read serializable_id (packet identifier). This will tell us the type of data to expect.	
+	// Read serializable_id (packet identifier). This will allow us to lookup the type of data to expect.	
 	var _serializable_id = buffer_read(_buffer, SERIALIZABLE_ID_BUFFER_TYPE);
-	// Find the layout of the data for the registered packet.
+	// Retrieve configuration for the identified struct.
 	var _serialization_config = global.__struct_serialization_config_map[? _serializable_id];
 	if (_serialization_config == undefined)
 	{
@@ -15,7 +15,6 @@ function qnet_deserialize(_buffer)
 		return undefined;
 	}
 
-	// If this packet has a registered layout lets read it in
 	if (_serialization_config.uses_manual_serialization)
 	{
 		var _struct_instance = new _serialization_config.struct_id();
@@ -45,7 +44,7 @@ function qnet_deserialize(_buffer)
 		// Standard deserizalation
 		var _struct_id = _serialization_config.struct_id;
 	
-		// Get to the right place after packet_type (which is the first byte)
+		// Get to the right place after serializable_id (which is the first byte)
 		buffer_seek(_buffer, buffer_seek_start, 1);
 
 		return __qnet_read_buffer_to_struct(_buffer, _struct_id);
@@ -53,7 +52,6 @@ function qnet_deserialize(_buffer)
 }
 
 ///@desc Creates a buffer and writes it by serializing the struct
-///	qnet_packet_send_to_all(qnet_serialize(new PositionUpdate(x, y)));
 ///@param {Struct} _serializable_struct_instance An instance of a struct that has been previously registered by qnet_register_serializable()
 ///@returns {Id.Buffer,undefined} Buffer with serialized data written. Or undefined(-10) if it could not be written.
 function qnet_serialize(_struct_instance) 
@@ -127,7 +125,17 @@ function qnet_serialize(_struct_instance)
 function __qnet_write_struct_to_buffer(_buffer, _struct_id, _struct_instance)
 {
 	var _serializable_id = global.__struct_id_to_serializable_id_map[? _struct_id];
-	var _serialization_config_data_types = global.__struct_serialization_config_map[? _serializable_id].data_types;
+	var _serialization_config = global.__struct_serialization_config_map[? _serializable_id];
+	
+	if (_serialization_config == undefined)
+	{
+		qnet_error($"While attempting to write struct to a buffer, there is no registered serialization config for struct: {instanceof(_struct_instance)}.",
+		            "This struct should be included with qnet_serialization_init().",
+					"qnet_serialization_init([ExampleStruct]);");
+	}
+	
+	var _serialization_config_data_types = _serialization_config.data_types;
+	
 	var _struct_field_names_array = struct_get_variable_names(_struct_instance);
 
 	for (var _a = 0; _a < array_length(_struct_field_names_array); _a++) 
