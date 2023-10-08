@@ -2,18 +2,17 @@
 
 #region --------------------------------- MACROS ---------------------------------
 
-// Used for GMNet serialization
-#macro CUSTOM_BUFFER_SERIALIZER 15
 // Each serialized buffer includes an identifier as its first piece of data.
 // Configuring this can open space for more identifiers. DEFAULT = buffer_u8 (255 MAXIMUM serializable_ids)
 #macro SERIALIZABLE_ID_BUFFER_TYPE buffer_u8
+// Custom Buffer Type Identifier
+#macro CUSTOM_BUFFER_SERIALIZER 15
 // Manual Serializer Macro
 #macro MANUAL_SERIALIZATION static __use_manual_serialization = true
 
 #endregion -----------------------------------------------------------------------
 
 #region ----------------------------- LOGGING MESSAGES ---------------------------
-
 #macro __QSERIALIZER_STRING_SERIALIZATION_EXAMPLE @"function ExampleStruct(_xx) constructor 
 { 
 	MANUAL_SERIALIZATION
@@ -35,7 +34,6 @@
 		xx = buffer_write(_buffer, buffer_u16);
 	}
 }"
-
 #endregion ----------------------------------------------------------------------
 
 /// @param {Array} _structs Array of Struct Ids that the Serializer handles. All Struct types used during serialization should be included here.
@@ -479,3 +477,24 @@ function QSerializer(_configuration) constructor
 	
 	#endregion -----------------------------------------------------------------------
 }
+
+
+#region ------------------------ Global Utility Functions ----------------------------
+///@desc Ommits method names. Gets property field names only.
+///@param {Struct} _struct
+function struct_get_variable_names(_struct) 
+{
+	var _field_names = variable_struct_get_names(_struct);
+
+	var _filtered_array = [];
+	for (var _i = 0; _i < array_length(_field_names); _i++) 
+	{
+		var _type = typeof(variable_struct_get(_struct, _field_names[_i]));
+		if (_type != "method") 
+		{
+			array_push(_filtered_array, _field_names[_i]);
+		}
+	}
+	return _filtered_array;
+}
+#endregion -----------------------------------------------------------------------

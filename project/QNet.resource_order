@@ -3,7 +3,6 @@
     {"name":"QNet","order":1,"path":"folders/QNet.yy",},
     {"name":"Logging","order":4,"path":"folders/QNet/Logging.yy",},
     {"name":"Serialization","order":1,"path":"folders/QNet/Serialization.yy",},
-    {"name":"Utilities","order":2,"path":"folders/QNet/Utilities.yy",},
   ],
   "ResourceOrderSettings": [
     {"name":"rm_qnet_test","order":2,"path":"rooms/rm_qnet_test/rm_qnet_test.yy",},
