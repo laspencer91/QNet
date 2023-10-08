@@ -6,9 +6,6 @@
     {"name":"Utilities","order":2,"path":"folders/QNet/Utilities.yy",},
   ],
   "ResourceOrderSettings": [
-    {"name":"qnet_serialization_init","order":3,"path":"scripts/qnet_serialization_init/qnet_serialization_init.yy",},
-    {"name":"__qnet_macros","order":1,"path":"scripts/__qnet_macros/__qnet_macros.yy",},
-    {"name":"__qnet_serializable_registration","order":2,"path":"scripts/__qnet_serializable_registration/__qnet_serializable_registration.yy",},
     {"name":"rm_qnet_test","order":2,"path":"rooms/rm_qnet_test/rm_qnet_test.yy",},
   ],
 }

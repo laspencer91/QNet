@@ -11,21 +11,21 @@
 *
 * Handles nested structs, and nested struct arrays!
 */
-function PlayerPosition(_x = buffer_u8, _y = buffer_u8) constructor
+function PlayerPosition(_x = buffer_u32, _y = buffer_u8) constructor
 {
 	xx = _x;
 	yy = _y;
-	
+
 	function toString()
 	{
 		return $"Position: ({xx}, {yy})"	
 	}
 }
 
-function PlayerData(_positions = [PlayerPosition], _name = buffer_string) constructor
+function PlayerData(_position = PlayerPosition, _name = buffer_string) constructor
 {
 	name = _name;
-	positions = _positions;
+	positions = _position;
 }
 
 function TestStruct(_players = [PlayerData]) constructor 
@@ -41,25 +41,16 @@ function TestStruct(_players = [PlayerData]) constructor
 	}
 }
 
-qnet_serialization_init([TestStruct, PlayerPosition, PlayerData]);
-
-var serializer = new QSerializer(
-function(_buffer, _props) {
-	buffer_write(_buffer, buffer_bool, _props.reliable);
-}, 
-function(_buffer) {
-	var reliable = buffer_read(_buffer, buffer_bool);
-	show_debug_message($"READING BUFFER HEADER {reliable} {buffer_tell(_buffer)}")
-	return {
-		reliable 
+var serializer = new QSerializer({
+	structs: [PlayerPosition, TestStruct],
+	header_config: {
+		reliable: buffer_bool,
 	}
 });
 
-var _buffer = serializer.Serialize(new PlayerPosition(10, 10), { reliable: true });
-
-show_debug_message($"Buffer length {buffer_get_size(_buffer)}")
+var _buffer = serializer.Serialize(new PlayerPosition(10, 10), { reliable: false });
 
 var _received_deserialized = serializer.Deserialize(_buffer);
 
-_received_deserialized.struct.OnReceive();
-show_debug_message($"Reliable? {_received_deserialized.reliable}")
+show_debug_message($"Received: {_received_deserialized.struct}");
+show_debug_message($"Reliable? {_received_deserialized.header_data.reliable}");
