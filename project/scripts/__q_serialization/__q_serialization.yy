@@ -1,11 +1,11 @@
 {
   "resourceType": "GMScript",
   "resourceVersion": "1.0",
-  "name": "qnet_serialization_init",
+  "name": "__q_serialization",
   "isCompatibility": false,
   "isDnD": false,
   "parent": {
-    "name": "QNet",
-    "path": "folders/QNet.yy",
+    "name": "Serialization",
+    "path": "folders/QNet/Serialization.yy",
   },
 }

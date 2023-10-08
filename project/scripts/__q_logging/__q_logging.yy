@@ -1,11 +1,11 @@
 {
   "resourceType": "GMScript",
   "resourceVersion": "1.0",
-  "name": "__qnet_macros",
+  "name": "__q_logging",
   "isCompatibility": false,
   "isDnD": false,
   "parent": {
-    "name": "Serialization",
-    "path": "folders/QNet/Serialization.yy",
+    "name": "Logging",
+    "path": "folders/QNet/Logging.yy",
   },
 }
