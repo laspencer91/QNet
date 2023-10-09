@@ -14,6 +14,8 @@
     {"resourceType":"GMFolder","resourceVersion":"1.0","name":"QNet","folderPath":"folders/QNet.yy",},
     {"resourceType":"GMFolder","resourceVersion":"1.0","name":"Logging","folderPath":"folders/QNet/Logging.yy",},
     {"resourceType":"GMFolder","resourceVersion":"1.0","name":"Serialization","folderPath":"folders/QNet/Serialization.yy",},
+    {"resourceType":"GMFolder","resourceVersion":"1.0","name":"MultiClient","folderPath":"folders/TESTING/MultiClient.yy",},
+    {"resourceType":"GMFolder","resourceVersion":"1.0","name":"TESTING","folderPath":"folders/TESTING.yy",},
   ],
   "IncludedFiles": [],
   "isEcma": false,
@@ -23,8 +25,12 @@
   },
   "resources": [
     {"id":{"name":"__q_logging","path":"scripts/__q_logging/__q_logging.yy",},},
+    {"id":{"name":"__qnetwork_manager","path":"scripts/__qnetwork_manager/__qnetwork_manager.yy",},},
+    {"id":{"name":"MultiClientGetClientID","path":"scripts/MultiClientGetClientID/MultiClientGetClientID.yy",},},
+    {"id":{"name":"__qnet_system_serializables","path":"scripts/__qnet_system_serializables/__qnet_system_serializables.yy",},},
     {"id":{"name":"__q_serialization","path":"scripts/__q_serialization/__q_serialization.yy",},},
     {"id":{"name":"obj_qnet_host","path":"objects/obj_qnet_host/obj_qnet_host.yy",},},
+    {"id":{"name":"MultiClient","path":"extensions/MultiClient/MultiClient.yy",},},
     {"id":{"name":"rm_qnet_test","path":"rooms/rm_qnet_test/rm_qnet_test.yy",},},
   ],
   "RoomOrderNodes": [
