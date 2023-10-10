@@ -1,11 +1,11 @@
 {
   "resourceType": "GMScript",
   "resourceVersion": "1.0",
-  "name": "__qnetwork_manager",
+  "name": "__qsignals_manager_class",
   "isCompatibility": false,
   "isDnD": false,
   "parent": {
-    "name": "QNetworkManager",
-    "path": "folders/QNet/QNetworkManager.yy",
+    "name": "Scripts",
+    "path": "folders/QNet/QSignals/Scripts.yy",
   },
 }

@@ -1,4 +1,4 @@
-network_manager.AsyncNetworkEvent();
+network.AsyncNetworkEvent();
 
 
 

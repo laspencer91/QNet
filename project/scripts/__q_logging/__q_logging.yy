@@ -5,7 +5,7 @@
   "isCompatibility": false,
   "isDnD": false,
   "parent": {
-    "name": "Logging",
-    "path": "folders/QNet/Logging.yy",
+    "name": "QLogging",
+    "path": "folders/QNet/QLogging.yy",
   },
 }

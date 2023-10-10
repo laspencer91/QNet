@@ -5,7 +5,7 @@
   "isCompatibility": false,
   "isDnD": false,
   "parent": {
-    "name": "QNet",
-    "path": "folders/QNet.yy",
+    "name": "QNetworkManager",
+    "path": "folders/QNet/QNetworkManager.yy",
   },
 }

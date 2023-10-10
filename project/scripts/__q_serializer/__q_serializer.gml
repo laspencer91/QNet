@@ -161,7 +161,7 @@ function QSerializer(_configuration) constructor
 				buffer_write(_buffer, _header_field_data_type, _header_data[$ _header_field_name]);
 			}
 		}
-		q_log($"[WRITING] BUFFER TELL AFTER HEADER {buffer_tell(_buffer)}");
+		q_log($"[WRITING] BUFFER TELL AFTER HEADER {buffer_tell(_buffer)}", QLOG_LEVEL.DEEP_DEBUG);
 
 		// WRITE DATA FROM STRUCT
 		if (_serialization_config.uses_manual_serialization)
@@ -207,7 +207,7 @@ function QSerializer(_configuration) constructor
 		var _serializable_id = buffer_read(_buffer, SERIALIZABLE_ID_BUFFER_TYPE);
 		var _header_data = {}
 		
-		q_log($"[READING] BUFFER TELL BEFORE HEADER {buffer_tell(_buffer)}", QLOG_LEVEL.DEBUG);
+		q_log($"[READING] BUFFER TELL BEFORE HEADER {buffer_tell(_buffer)}", QLOG_LEVEL.DEEP_DEBUG);
 		if (!is_undefined(__header_serialization_config))
 		{
 			for (var _i = 0; _i < array_length(__header_prop_names); _i++)
@@ -217,7 +217,7 @@ function QSerializer(_configuration) constructor
 				_header_data[$ _header_field_name] = buffer_read(_buffer, _header_field_data_type);
 			}
 		}
-		q_log($"[READING] BUFFER TELL AFTER HEADER {buffer_tell(_buffer)}", QLOG_LEVEL.DEBUG);
+		q_log($"[READING] BUFFER TELL AFTER HEADER {buffer_tell(_buffer)}", QLOG_LEVEL.DEEP_DEBUG);
 		
 		// Retrieve configuration for the identified struct.
 		var _serialization_config = __struct_serialization_config_map[? _serializable_id];
@@ -291,7 +291,7 @@ function QSerializer(_configuration) constructor
 			var _data_type	  = _serialization_config_data_types[_a];
 			var _field_value  = _struct_instance[$ _field_name];
 			
-			q_log($"Writing data type {_data_type} to buffer.", QLOG_LEVEL.DEBUG);
+			q_log($"Writing data type {_data_type} to buffer.", QLOG_LEVEL.DEEP_DEBUG);
 		
 			if (_data_type == buffer_string && !is_string(_field_value))
 				q_log("When building a registered message, a string was expected but a 'real' number was passed.");	
@@ -377,7 +377,7 @@ function QSerializer(_configuration) constructor
 		{
 			var _curr_field_datatype = _serialization_config_data_types[_i];
 		
-			q_log($"Reading data type {_curr_field_datatype} from buffer.", QLOG_LEVEL.DEBUG);
+			q_log($"Reading data type {_curr_field_datatype} from buffer.", QLOG_LEVEL.DEEP_DEBUG);
 		
 			if (is_array(_curr_field_datatype))
 			{

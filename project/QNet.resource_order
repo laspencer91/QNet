@@ -1,14 +1,18 @@
 {
   "FolderOrderSettings": [
     {"name":"QNet","order":1,"path":"folders/QNet.yy",},
-    {"name":"Logging","order":4,"path":"folders/QNet/Logging.yy",},
-    {"name":"Serialization","order":1,"path":"folders/QNet/Serialization.yy",},
+    {"name":"QLogging","order":2,"path":"folders/QNet/QLogging.yy",},
+    {"name":"QNetworkManager","order":6,"path":"folders/QNet/QNetworkManager.yy",},
+    {"name":"QSerializer","order":1,"path":"folders/QNet/QSerializer.yy",},
+    {"name":"QSignals","order":5,"path":"folders/QNet/QSignals.yy",},
+    {"name":"Scripts","order":1,"path":"folders/QNet/QSignals/Scripts.yy",},
     {"name":"TESTING","order":4,"path":"folders/TESTING.yy",},
   ],
   "ResourceOrderSettings": [
-    {"name":"__qnetwork_manager","order":6,"path":"scripts/__qnetwork_manager/__qnetwork_manager.yy",},
+    {"name":"__qnetwork_connection","order":2,"path":"scripts/__qnetwork_connection/__qnetwork_connection.yy",},
+    {"name":"__qnetwork_manager","order":1,"path":"scripts/__qnetwork_manager/__qnetwork_manager.yy",},
     {"name":"MultiClientGetClientID","order":1,"path":"scripts/MultiClientGetClientID/MultiClientGetClientID.yy",},
-    {"name":"__qnet_system_serializables","order":5,"path":"scripts/__qnet_system_serializables/__qnet_system_serializables.yy",},
+    {"name":"__qsignals_manager_class","order":1,"path":"scripts/__qsignals_manager_class/__qsignals_manager_class.yy",},
     {"name":"rm_qnet_test","order":1,"path":"rooms/rm_qnet_test/rm_qnet_test.yy",},
   ],
 }

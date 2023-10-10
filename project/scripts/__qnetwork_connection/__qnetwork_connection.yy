@@ -1,7 +1,7 @@
 {
   "resourceType": "GMScript",
   "resourceVersion": "1.0",
-  "name": "__qnetwork_manager",
+  "name": "__qnetwork_connection",
   "isCompatibility": false,
   "isDnD": false,
   "parent": {
