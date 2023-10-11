@@ -26,8 +26,8 @@ function QConnectionRequest(_status = buffer_u8, _assigned_id = buffer_s16) cons
 			{
 				var _created_connection = _qnetwork.AddConnection(_ip, _port);
 				var _response = new QConnectionRequest(QCONNECTION_REQUEST_STATUS.SUCCESS, _created_connection.id);
-				//_created_connection.SendPacket(_response);
-				_created_connection.MakeAlive();
+				_created_connection.SendPacket(_response);
+				_created_connection.OnConnect();
 				_qnetwork.OnPeerConnected(_created_connection);
 			}
 			catch (_exception)
@@ -55,7 +55,7 @@ function QConnectionRequest(_status = buffer_u8, _assigned_id = buffer_s16) cons
 		{
 			show_debug_message($"Received Successful Connection Response - We Are Assigned ID: {__assigned_id}");
 			// Call the OnPeerConnected Callback. The Connection was created when the request began.
-			_sender.MakeAlive();
+			_sender.OnConnect();
 			_qnetwork.OnPeerConnected(_sender);
 		}
 		

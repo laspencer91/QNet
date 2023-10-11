@@ -21,8 +21,8 @@ try {
 } catch (_exception) {
 	var _port = network.Start(1);
 	q_log($"Socket at port {_port}");
-	network.Connect("127.0.0.1", 3005);
-	q_log($"Sent connection request to localhost:{3005}");
+	network.Connect("127.0.0.1", 3000);
+	q_log($"Sent connection request to localhost:{3000}");
 }
 
 //var _buffer = serializer.Serialize(new PlayerPosition(10, 10), { reliable: false });

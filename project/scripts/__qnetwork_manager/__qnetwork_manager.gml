@@ -106,6 +106,7 @@ function QNetworkManager(_serializable_structs) constructor
 			if (!is_undefined(_iconnection) && _iconnection.id == _connection.id)
 			{
 				__connections[_i] = undefined;
+				_iconnection.OnRemove();
 				q_log($"Connection {_i} removed.");
 			}
 		}
