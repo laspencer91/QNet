@@ -7,6 +7,7 @@
     {"name":"QSignals","order":5,"path":"folders/QNet/QSignals.yy",},
     {"name":"Scripts","order":1,"path":"folders/QNet/QSignals/Scripts.yy",},
     {"name":"TESTING","order":4,"path":"folders/TESTING.yy",},
+    {"name":"QTimesource","order":7,"path":"folders/QNet/QTimesource.yy",},
   ],
   "ResourceOrderSettings": [
     {"name":"__qnetwork_connection","order":2,"path":"scripts/__qnetwork_connection/__qnetwork_connection.yy",},

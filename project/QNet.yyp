@@ -19,6 +19,7 @@
     {"resourceType":"GMFolder","resourceVersion":"1.0","name":"Scripts","folderPath":"folders/QNet/QSignals/Scripts.yy",},
     {"resourceType":"GMFolder","resourceVersion":"1.0","name":"TESTING","folderPath":"folders/TESTING.yy",},
     {"resourceType":"GMFolder","resourceVersion":"1.0","name":"MultiClient","folderPath":"folders/TESTING/MultiClient.yy",},
+    {"resourceType":"GMFolder","resourceVersion":"1.0","name":"QTimesource","folderPath":"folders/QNet/QTimesource.yy",},
   ],
   "IncludedFiles": [],
   "isEcma": false,
@@ -29,6 +30,7 @@
   "resources": [
     {"id":{"name":"__qnetwork_connection","path":"scripts/__qnetwork_connection/__qnetwork_connection.yy",},},
     {"id":{"name":"__q_logging","path":"scripts/__q_logging/__q_logging.yy",},},
+    {"id":{"name":"__q_simple_timesource","path":"scripts/__q_simple_timesource/__q_simple_timesource.yy",},},
     {"id":{"name":"__qnetwork_manager","path":"scripts/__qnetwork_manager/__qnetwork_manager.yy",},},
     {"id":{"name":"MultiClientGetClientID","path":"scripts/MultiClientGetClientID/MultiClientGetClientID.yy",},},
     {"id":{"name":"__qnet_system_serializables","path":"scripts/__qnet_system_serializables/__qnet_system_serializables.yy",},},

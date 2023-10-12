@@ -1,6 +1,6 @@
 function QNetworkConnection(_id, _ip, _port, _qnet_manager) constructor
 {
-	enum QCONNECTION_STATUS { DISCONNECTED, CONNECTED, CONNECTING }
+	enum QCONNECTION_STATUS { DISCONNECTED, CONNECTED, CONNECTING, TIMEOUT }
 	
 	id					    = _id;
 	ip						= _ip;
@@ -14,10 +14,10 @@ function QNetworkConnection(_id, _ip, _port, _qnet_manager) constructor
 	__socket = _qnet_manager.__socket;
 	// QSerializer instance that comes from this Connections owning QNetworkManager
 	__serializer = _qnet_manager.__serializer;
-	
+	// Counter used during the connection attempt process.
 	__connect_attempts = 0;
+	// The maximum amount of times to resend a connection request before timing out.
 	__max_connection_attempts = 5;
-	__on_connection_attempt_timeout = undefined;
 	
 	function OnConnect()
 	{
@@ -25,7 +25,7 @@ function QNetworkConnection(_id, _ip, _port, _qnet_manager) constructor
 		status = QCONNECTION_STATUS.CONNECTED;
 	}
 	
-	function AttemptConnection(_on_connection_attempt_timeout)
+	function AttemptConnection()
 	{
 		if (status == QCONNECTION_STATUS.CONNECTED)
 		{
@@ -38,8 +38,6 @@ function QNetworkConnection(_id, _ip, _port, _qnet_manager) constructor
 		status = QCONNECTION_STATUS.CONNECTING;
 
 		SendPacket(new QConnectionRequest(QCONNECTION_REQUEST_STATUS.REQUESTED));
-		
-		__on_connection_attempt_timeout = _on_connection_attempt_timeout;
 	}
 	
 	function SendPacket(_struct_instance)
@@ -48,17 +46,20 @@ function QNetworkConnection(_id, _ip, _port, _qnet_manager) constructor
 		network_send_udp(__socket, ip, port, _buffer, buffer_get_size(_buffer));	
 	}
 	
-	function __InternalPulse()
+	__InternalPulse = function()
 	{
 		static __heartbeat_packet = new QConnectionHeartbeat();
-		
+
 		if (status == QCONNECTION_STATUS.CONNECTING)
 		{
 			q_log($"Sending Connection Request {__connect_attempts++}");
-			SendPacket(new QConnectionRequest(QCONNECTION_REQUEST_STATUS.REQUESTED));	
+			
+			SendPacket(new QConnectionRequest(QCONNECTION_REQUEST_STATUS.REQUESTED));
+			
 			if (__connect_attempts >= __max_connection_attempts)
-			{	// Timeout
-				__on_connection_attempt_timeout(self);
+			{	
+				// Timeout
+				status = QCONNECTION_STATUS.TIMEOUT;
 				__connect_attempts = 0;
 			}	
 		}
@@ -67,13 +68,12 @@ function QNetworkConnection(_id, _ip, _port, _qnet_manager) constructor
 			SendPacket(__heartbeat_packet);
 		}
 	}
-	
+
 	// The heartbeat keeps the connection alive by sending a keep alive packet every couple seconds.
-	__pulse_timesource = time_source_create(time_source_game, heartbeat_frequency, time_source_units_seconds, __InternalPulse, [], -1);
-	time_source_start(__pulse_timesource);
+	__pulse_timesource = new QSimpleTimesource(heartbeat_frequency, __InternalPulse);
 	
-	function OnRemove()
+	function Shutdown()
 	{
-		time_source_stop(__pulse_timesource);
+		__pulse_timesource.Destroy();
 	}
 }

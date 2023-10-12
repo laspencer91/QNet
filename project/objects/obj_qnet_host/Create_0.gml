@@ -16,6 +16,7 @@ network.OnConnectionRequestRejected = function(_reason)
 
 try {
 	var _port = network.Start(1, 3000);
+	network.Connect("127.0.0.1", 3001);
 	q_log($"Socket initialized at port: {_port}");
 	role = "SERVER";
 } catch (_exception) {

@@ -16,6 +16,24 @@ function QNetworkManager(_serializable_structs) constructor
 		}
 	});
 	
+	// feather ignore once GM1043 - Feather doesn't recognize "method" as valid type for Function arg.
+	// Function runs periodically to take actions depending on a Connections' status.
+	__connection_status_check = new QSimpleTimesource(2, method(self, function() {			
+			q_log("Performing Connection Status Check");
+			for (var _i = 0; _i < array_length(__connections); _i++)
+			{
+				var _iconnection = __connections[_i];
+				if (is_undefined(_iconnection)) 
+					continue;
+				
+				if (_iconnection.status = QCONNECTION_STATUS.TIMEOUT)
+				{
+					OnConnectionRequestTimeout(_iconnection);	
+				}
+			}
+		})
+	);
+	
 	/// Start the network. This initializes a socket and begins listening for incoming messages. THROWS - QNET_EXCEPTION_CREATE_SOCKET_FAILED
 	function Start(_max_connections, _port = undefined)
 	{
@@ -63,10 +81,7 @@ function QNetworkManager(_serializable_structs) constructor
 			return;	
 		}
 		var _new_connection = AddConnection(_ip, _port);
-		_new_connection.AttemptConnection(function(_connection) {
-			OnConnectionRequestTimeout(_connection);
-			RemoveConnection(_connection);	
-		});
+		_new_connection.AttemptConnection();
 	}
 	
 	function AddConnection(_ip, _port)
@@ -106,7 +121,7 @@ function QNetworkManager(_serializable_structs) constructor
 			if (!is_undefined(_iconnection) && _iconnection.id == _connection.id)
 			{
 				__connections[_i] = undefined;
-				_iconnection.OnRemove();
+				_iconnection.Shutdown();
 				q_log($"Connection {_i} removed.");
 			}
 		}
@@ -177,14 +192,16 @@ function QNetworkManager(_serializable_structs) constructor
 	/// @param {String} _reason Message with information on why the connection was rejected
 	function OnConnectionRequestRejected(_reason)
 	{   // Called from QConnectionRequest Serializable
+		RemoveConnection(_connection);
 		q_log($"[QNETWORK MANAGER] Connection request has failed - {_reason}");
 	}
 	
 	/// Called when a connection attempt times out.
 	/// May override the default behavior of this function with network_manager.OnConnectionRequestTimeout(_connection_id);
-	/// @param {Real} _connection The connection instance that failed.
+	/// @param {Struct.QConnection} _connection The connection instance that failed.
 	function OnConnectionRequestTimeout(_connection)
 	{
+		RemoveConnection(_connection);
 		q_log($"[CONNECTION FAILED] No Response From Remote Peer {_connection.id}");	
 	}
 }
