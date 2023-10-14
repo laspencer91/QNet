@@ -2,7 +2,7 @@ show_debug_log(true);
 
 role = "PEER";
 
-network = new QNetworkManager([QConnectionRequest, QConnectionHeartbeat]);
+network = new QNetworkManager([QConnectionRequest, QConnectionHeartbeat, QConnectionDisconnect]);
 
 network.OnPeerConnected = function(_connection) 
 {
@@ -14,9 +14,15 @@ network.OnConnectionRequestRejected = function(_reason)
 	q_log($"[NetManager] FAILED CONNECTION: {_reason}");
 }
 
+network.OnConnectionTimeout = function(_connection)
+{
+	q_log($"[CUSTOM NET MANAGER] Connection {_connection.id} timed out!");
+	network.RemoveConnection(_connection);
+}
+
 try {
-	var _port = network.Start(1, 3000);
-	network.Connect("127.0.0.1", 3001);
+	var _port = network.Start(2, 3000);
+	//network.Connect("127.0.0.1", 3001);
 	q_log($"Socket initialized at port: {_port}");
 	role = "SERVER";
 } catch (_exception) {
@@ -25,6 +31,10 @@ try {
 	network.Connect("127.0.0.1", 3000);
 	q_log($"Sent connection request to localhost:{3000}");
 }
+
+// TODO:
+// 1. Add Disconnection Functionality
+// 2.  
 
 //var _buffer = serializer.Serialize(new PlayerPosition(10, 10), { reliable: false });
 //var _received_deserialized = serializer.Deserialize(_buffer);

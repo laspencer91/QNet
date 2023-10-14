@@ -5,9 +5,10 @@ function QNetworkConnection(_id, _ip, _port, _qnet_manager) constructor
 	id					    = _id;
 	ip						= _ip;
 	port				    = _port;
-	last_communication_time = current_time;
+	last_data_received_time = current_time;
 	heartbeat_frequency     = 2;
 	status					= QCONNECTION_STATUS.DISCONNECTED;
+	ping                    = 0;
 	
 	__qnet_manager = _qnet_manager;
 	// The socket id to communicate through.
@@ -46,9 +47,10 @@ function QNetworkConnection(_id, _ip, _port, _qnet_manager) constructor
 		network_send_udp(__socket, ip, port, _buffer, buffer_get_size(_buffer));	
 	}
 	
-	__InternalPulse = function()
+	var __InternalPulse = function()
 	{
-		static __heartbeat_packet = new QConnectionHeartbeat();
+		// Reuse this struct for each heartbeat. No reason to build a new one each time.
+		static __heartbeat_packet = new QConnectionHeartbeat(current_time, false);
 
 		if (status == QCONNECTION_STATUS.CONNECTING)
 		{
@@ -65,15 +67,29 @@ function QNetworkConnection(_id, _ip, _port, _qnet_manager) constructor
 		}
 		else if (status == QCONNECTION_STATUS.CONNECTED)
 		{
+			// Set the heartbeat data.
+			__heartbeat_packet.is_reply = false;
+			__heartbeat_packet.sent_time = current_time;
+			// Serialize and send.
 			SendPacket(__heartbeat_packet);
 		}
 	}
 
 	// The heartbeat keeps the connection alive by sending a keep alive packet every couple seconds.
-	__pulse_timesource = new QSimpleTimesource(heartbeat_frequency, __InternalPulse);
+	__pulse_timesource = new QSimpleTimesource(heartbeat_frequency, __InternalPulse).Start();
 	
-	function Shutdown()
+	/// Disconnects and shuts down communication to this connection. Calling this effectively destroys the connection
+	/// and this instance cannot be reused. If this connection is currently connected, will also send a packet to the 
+	/// peer, notifying them of the disconnection.
+	function Disconnect()
 	{
 		__pulse_timesource.Destroy();
+		
+		if (status == QCONNECTION_STATUS.CONNECTED)
+		{
+			SendPacket(new QConnectionDisconnect());
+		}
+		
+		status = QCONNECTION_STATUS.DISCONNECTED;
 	}
 }

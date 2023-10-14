@@ -6,7 +6,9 @@ function QNetworkManager(_serializable_structs) constructor
 	
 	__port = 3000;
 	__max_connections = 1;
+	__connection_timeout = 5 * 1000;
 	__connections = [];
+	__connection_id_lookup = ds_map_create();
 	__socket = undefined;
 
 	__serializer = new QSerializer({
@@ -16,34 +18,14 @@ function QNetworkManager(_serializable_structs) constructor
 		}
 	});
 	
-	// feather ignore once GM1043 - Feather doesn't recognize "method" as valid type for Function arg.
-	// Function runs periodically to take actions depending on a Connections' status.
-	__connection_status_check = new QSimpleTimesource(2, method(self, function() {			
-			q_log("Performing Connection Status Check");
-			for (var _i = 0; _i < array_length(__connections); _i++)
-			{
-				var _iconnection = __connections[_i];
-				if (is_undefined(_iconnection)) 
-					continue;
-				
-				if (_iconnection.status = QCONNECTION_STATUS.TIMEOUT)
-				{
-					OnConnectionRequestTimeout(_iconnection);	
-				}
-			}
-		})
-	);
-	
 	/// Start the network. This initializes a socket and begins listening for incoming messages. THROWS - QNET_EXCEPTION_CREATE_SOCKET_FAILED
 	function Start(_max_connections, _port = undefined)
 	{
 		var _socket_result;
-
+		// Find Port and attempt to create scoket
 		if (_port != undefined)
 		{
-			q_log($"ATTEMPTING TO BIND PORT {_port}")
 			_socket_result = network_create_socket_ext(network_socket_udp, _port);
-			q_log($"SOCKET RESULT {_socket_result}")
 			if (_socket_result >= 0) 
 			{
 				__port   = _port;
@@ -68,11 +50,39 @@ function QNetworkManager(_serializable_structs) constructor
 		if (_socket_result < 0) throw(QNET_EXCEPTION_CREATE_SOCKET_FAILED);
 		
 		__max_connections = _max_connections;
-		__connections     = array_create(_max_connections, undefined);;
+		__connections     = array_create(_max_connections, undefined);
+		
+		__connection_status_check.Start();
 		
 		return __port;
 	}
 	
+	// Shutdown the network manager. This closes the communication socket and shuts down all connections.
+	// Start can be called again to restart network communication.
+	function Shutdown()
+	{
+		// Stop connection status checker, and reset it for future use.
+		__connection_status_check.Stop();
+		__connection_status_check.Reset();
+		
+		// Disconnect all connections. Clear out our array.
+		for (var _i = 0; _i < array_length(__connections); _i++)
+		{
+			var _iconnection = __connections[_i];
+			if (is_undefined(_iconnection)) continue;
+			_iconnection.Disconnect();
+		}
+		__connections = [];
+		ds_map_clear(__connection_id_lookup);
+		
+		// Destroy Socket
+		network_destroy(__socket);
+		__socket = undefined;
+		
+		q_log("NetworkManager has shutdown.");
+	}
+	
+	/// Begin a connection attempt to an ip and port.
 	function Connect(_ip, _port) 
 	{
 		if (GetConnection(_ip, _port) != undefined)
@@ -84,6 +94,7 @@ function QNetworkManager(_serializable_structs) constructor
 		_new_connection.AttemptConnection();
 	}
 	
+	/// Add a new connection to this network manager associated with an ip and port.
 	function AddConnection(_ip, _port)
 	{
 		var _new_connection = undefined;
@@ -100,6 +111,7 @@ function QNetworkManager(_serializable_structs) constructor
 			{
 				_new_connection = new QNetworkConnection(_id, _ip, _port, self);
 				__connections[_id] = _new_connection;
+				__connection_id_lookup[? $"{_ip}:{_port}"] = _id;
 				break;
 			}
 		}
@@ -113,18 +125,21 @@ function QNetworkManager(_serializable_structs) constructor
 		return _new_connection
 	}
 	
-	function RemoveConnection(_connection)
+	/// Effectively disconnects a connection and removes it from the QNetworks tracking. OnPeerDisconnected() will not be called.
+	/// Will send a packet to the peer which is served by the connection instance unless "quietly" is true.
+	/// @param {Struct.QConnection} _connection QConnection instance to disconnect.
+	/// @param {Bool} _quietly Default: false. If true, will be removed without sending a disconnection notification to the peer.
+	function RemoveConnection(_connection, _quietly = false)
 	{
-		for (var _i = 0; _i < array_length(__connections); _i++)
+		if (is_undefined(_connection))
 		{
-			var _iconnection = __connections[_i];
-			if (!is_undefined(_iconnection) && _iconnection.id == _connection.id)
-			{
-				__connections[_i] = undefined;
-				_iconnection.Shutdown();
-				q_log($"Connection {_i} removed.");
-			}
+			q_warn("RemoveConnection was called with an undefined connection param.");
+			return;
 		}
+		__connections[_connection.id] = undefined;
+		ds_map_delete(__connection_id_lookup, $"{_connection.ip}:{_connection.port}");
+		if (_quietly) _connection.status = QCONNECTION_STATUS.DISCONNECTED;
+		_connection.Disconnect();
 	}
 	
 	/// Get a connection instance with the provided ip and port.
@@ -133,27 +148,30 @@ function QNetworkManager(_serializable_structs) constructor
 	/// @return {Struct.QConnection, Undefined}
 	function GetConnection(_ip, _port)
 	{
-		// Check if connection already exists for the incoming address.
-		for (var _i = 0; _i < array_length(__connections); _i++)
-		{
-			var _iconnection = __connections[_i];
-			if (_iconnection != undefined && _iconnection.ip == _ip && _iconnection.port == _port)
-			{
-				return _iconnection;
-			}
-		}
-		
-		return undefined;
+		var _connection_id = __connection_id_lookup[? $"{_ip}:{_port}"];
+		return !is_undefined(_connection_id) ? __connections[_connection_id] : undefined;
 	}
 	
-	function SendPacket(_struct_instance, _ip, _port)
+	/// Get a connection instance assigned to the specified id. Undefined is returned if no connection is assigned the id.
+	/// @param {Real} _id The qnet connection id assigned to a connection instance.
+	/// @return {Struct.QConnection, Undefined}
+	function GetConnectionById(_id)
+	{
+		return __connections[_id];
+	}
+	
+	/// Send a packet to an IP and PORT.
+	function SendPacketToAddress(_struct_instance, _ip, _port)
 	{
 		var _buffer = __serializer.Serialize(_struct_instance, { reliable: false });
 		network_send_udp(__socket, _ip, _port, _buffer, buffer_get_size(_buffer));	
 	}
 	
+	/// Receive and process data. Must be called in an objects Async event.
 	function AsyncNetworkEvent()
 	{
+		static _name_of_connection_req_packet = instanceof(new QConnectionRequest());
+		
 		if (__socket == undefined)
 		{
 			q_warn("Async Network Event Fired, but QNetworkManager does not have a socket.");
@@ -165,19 +183,52 @@ function QNetworkManager(_serializable_structs) constructor
 		var _port = async_load[? "port"];
 		var _buffer = async_load[? "buffer"];
 			
-		show_debug_message($"ID: {_id} | IP: {_ip} | PORT: {_port} | BUFFER: {_buffer}");
 		var _received_packet = __serializer.Deserialize(_buffer);
 		var _is_reliable = _received_packet.header_data.reliable;
-		
-		// Update the connections last communication time
+
 		var _incoming_connection = GetConnection(_ip, _port);
 		if (_incoming_connection != undefined)
-		{
-			_incoming_connection.last_communication_time = current_time;
+		{	// Update the connections last communication time
+			_incoming_connection.last_data_received_time = current_time;
 		}
-		
-		_received_packet.struct.OnReceive(self, _incoming_connection);
+		else if (instanceof(_received_packet.struct) != _name_of_connection_req_packet)
+		{	// Do not process packets from unconnected addresses unless it is a connection request packet!
+			q_warn("Recieving packets from an unconnected client!");
+			return;
+		}
+		// Process the packet
+		_received_packet.struct.OnReceive(self, _incoming_connection);	
 	}
+	
+	var __InternalConnectionCheck = function() 
+	{			
+		q_log("[NET MANAGER] Performing Connection Status Check", QLOG_LEVEL.DEEP_DEBUG);
+		for (var _i = 0; _i < array_length(__connections); _i++)
+		{
+			var _iconnection = __connections[_i];
+			if (is_undefined(_iconnection)) 
+				continue;
+				
+			switch(_iconnection.status)
+			{
+				case QCONNECTION_STATUS.TIMEOUT:
+					OnConnectionRequestTimeout(_iconnection);
+					continue;
+				case QCONNECTION_STATUS.CONNECTED:
+					if (current_time - _iconnection.last_data_received_time > __connection_timeout)
+					{
+						OnConnectionTimeout(_iconnection);
+						continue;
+					}
+					break;
+			}
+		}
+	}
+	
+	// Periodically checks connections status and takes action dependent upon those statuses.
+	__connection_status_check = new QSimpleTimesource(2, __InternalConnectionCheck);
+	
+	#region ------------------------ Overridable Callback Functions -------------------------------------------
 	
 	/// Called when a new Peer makes connection to remote Host, or a remote Peer makes connection to local Host. 
 	/// You may override this function with network_manager.OnPeerConnected = function(_connection) { your custom code }
@@ -187,16 +238,23 @@ function QNetworkManager(_serializable_structs) constructor
 		q_log($"[QNETWORK MANAGER] A new peer has connected with id {_connection.id}");
 	}
 	
+	/// Called when a QConnectionDisconnect message is received from a remote peer.
+	/// You may override this function with network_manager.OnPeerDisconnected = function(_connection) { your custom code }
+	/// @param {Struct.QConnection} _connection The disconnected connection.
+	function OnPeerDisconnected(_connection)
+	{	// Called from QConnectionRequest Serializable
+		q_log($"[QNETWORK MANAGER] A new peer has disconnected with id {_connection.id}");
+	}
+	
 	/// Called when this Peer has requested a connection, and the remote peer sent a connection rejection response.
 	/// May override the default behavior of this function with network_manager.OnConnectionRequestRejected(_reason);
 	/// @param {String} _reason Message with information on why the connection was rejected
 	function OnConnectionRequestRejected(_reason)
 	{   // Called from QConnectionRequest Serializable
-		RemoveConnection(_connection);
 		q_log($"[QNETWORK MANAGER] Connection request has failed - {_reason}");
 	}
 	
-	/// Called when a connection attempt times out.
+	/// Called when a connection attempt times out. Removes connection by default.
 	/// May override the default behavior of this function with network_manager.OnConnectionRequestTimeout(_connection_id);
 	/// @param {Struct.QConnection} _connection The connection instance that failed.
 	function OnConnectionRequestTimeout(_connection)
@@ -204,4 +262,15 @@ function QNetworkManager(_serializable_structs) constructor
 		RemoveConnection(_connection);
 		q_log($"[CONNECTION FAILED] No Response From Remote Peer {_connection.id}");	
 	}
+	
+	/// Called when an active connection times out. Removes the connection by default.
+	/// May override the default behavior of this function with network_manager.OnConnectionTimeout(_connection_id);
+	/// @param {Struct.QConnection} _connection The connection instance that failed.
+	function OnConnectionTimeout(_connection)
+	{
+		RemoveConnection(_connection);
+		q_log($"[CONNECTION TIMEOUT] No response detected from connection: {_connection.id}");	
+	}
+	
+	#endregion --------------------- Overridable Callback Functions -------------------------------------------
 }

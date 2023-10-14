@@ -5,7 +5,8 @@ function QSimpleTimesource(_period_seconds, _callback, _reps = -1) constructor
 	
 	function Start()
 	{
-		time_source_start(_timesource);	
+		time_source_start(_timesource);
+		return self;
 	}
 	
 	function Reset()
@@ -28,6 +29,4 @@ function QSimpleTimesource(_period_seconds, _callback, _reps = -1) constructor
 		time_source_stop(_timesource);
 		time_source_destroy(_timesource);	
 	}
-	
-	Start();
 }

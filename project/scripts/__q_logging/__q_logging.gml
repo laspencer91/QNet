@@ -6,7 +6,7 @@
 *******************************************************************/
 
 // This is a library wide setting. Update this to change what messages get displayed.
-#macro __QLOG_LEVEL QLOG_LEVEL.DEFAULT
+#macro __QLOG_LEVEL QLOG_LEVEL.DEBUG
 
 // Changing this will update the [APP NAME] that appears in console logs and error messages
 #macro __QLOG_APP_NAME "QNET"
