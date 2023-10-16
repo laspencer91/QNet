@@ -20,6 +20,10 @@ function QNetworkConnection(_id, _ip, _port, _qnet_manager) constructor
 	__connect_attempts = 0;
 	// The maximum amount of times to resend a connection request before timing out.
 	__max_connection_attempts = 5;
+	// Most recently received sequence number from this connection.
+	incoming_sequence = -1;
+	// Sent and incremented with each packet sent.
+	outgoing_sequence = 0;
 	
 	function OnConnect()
 	{
@@ -42,9 +46,16 @@ function QNetworkConnection(_id, _ip, _port, _qnet_manager) constructor
 		SendPacket(new QConnectionRequest(QCONNECTION_REQUEST_STATUS.REQUESTED));
 	}
 	
-	function SendPacket(_struct_instance)
+	function SendPacket(_struct_instance, _delivery_type = QNET_DELIVERY_TYPE.UNRELIABLE)
 	{
-		var _buffer = __serializer.Serialize(_struct_instance, { reliable: false });
+		// Sequence Number Rollback. 65535 <- Max number for u_16.
+		if (outgoing_sequence++ > 65535)
+			outgoing_sequence = 0;
+		
+		var _buffer = __serializer.Serialize(_struct_instance, { 
+			delivery_type: _delivery_type, 
+			sequence: outgoing_sequence
+		});
 		network_send_udp(__socket, ip, port, _buffer, buffer_get_size(_buffer));	
 	}
 	

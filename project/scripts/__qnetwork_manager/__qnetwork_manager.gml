@@ -1,10 +1,11 @@
 function QNetworkManager(_serializable_structs) constructor
 {
+	enum QNET_DELIVERY_TYPE { UNRELIABLE, SEQUENCED }
 	#macro QNET_EXCEPTION_NETWORK_ALREADY_STARTED "Network Already Started"
 	#macro QNET_EXCEPTION_CREATE_SOCKET_FAILED    "Create Socket Failed"
 	#macro QNET_EXCEPTION_MAX_CONNECTIONS         "Max Connections Reached"
 	#macro QNET_EXCEPTION_ALREADY_CONNECTED       "Already Connected"
-
+	
 	is_running = false;
 	
 	__port = 3000;
@@ -14,10 +15,14 @@ function QNetworkManager(_serializable_structs) constructor
 	__connection_id_lookup = ds_map_create();
 	__socket = undefined;
 
+	#macro QNET_SEQ_BUFFER_TYPE buffer_u16
+
+	// The buffer type used for serializing the sequence number value.
 	__serializer = new QSerializer({
 		structs: _serializable_structs,
 		header_config: {
-			reliable: buffer_bool,
+			delivery_type: buffer_u8,
+			sequence: QNET_SEQ_BUFFER_TYPE,
 		}
 	});
 	
@@ -187,7 +192,7 @@ function QNetworkManager(_serializable_structs) constructor
 	/// Send a packet to an IP and PORT.
 	function SendPacketToAddress(_struct_instance, _ip, _port)
 	{
-		var _buffer = __serializer.Serialize(_struct_instance, { reliable: false });
+		var _buffer = __serializer.Serialize(_struct_instance, { delivery_type: QNET_DELIVERY_TYPE.UNRELIABLE, sequence: 0 });
 		network_send_udp(__socket, _ip, _port, _buffer, buffer_get_size(_buffer));	
 	}
 	
@@ -208,7 +213,6 @@ function QNetworkManager(_serializable_structs) constructor
 		var _buffer = async_load[? "buffer"];
 			
 		var _received_packet = __serializer.Deserialize(_buffer);
-		var _is_reliable = _received_packet.header_data.reliable;
 
 		var _incoming_connection = GetConnection(_ip, _port);
 		if (_incoming_connection != undefined)
@@ -220,8 +224,40 @@ function QNetworkManager(_serializable_structs) constructor
 			q_warn("Recieving packets from an unconnected client!");
 			return;
 		}
-		// Process the packet
-		_received_packet.struct.OnReceive(self, _incoming_connection);	
+		///////////////////////////////////////////////////
+		//               Process the packet
+		///////////////////////////////////////////////////
+		var _delivery_type     = _received_packet.header_data.delivery_type;
+		var _received_sequence = _received_packet.header_data.sequence;
+		
+		if (_incoming_connection.incoming_sequence - _received_sequence > 65000)
+		{
+			// The sequence numbers have rolled back around. 
+			// EX: Previous Sequence 255 - New Sequence 0 << Rolled back to zero.
+			_incoming_connection.incoming_sequence = -1;
+		}
+		
+		// Detect sequence number rollback.
+		var _packet_is_newer = _received_sequence > _incoming_connection.incoming_sequence;
+		if (_packet_is_newer)
+		{
+			_incoming_connection.incoming_sequence = _received_sequence;
+		}
+		
+		// Handle Sequenced Delivery Type
+		if (_delivery_type == QNET_DELIVERY_TYPE.SEQUENCED)
+		{
+			// If a packet with newer data beat this one here, forget about it.
+			if (_packet_is_newer)
+			{
+				_received_packet.struct.OnReceive(self, _incoming_connection);
+			}
+		}
+		// Handle standard unreliable packet types.
+		if (_delivery_type == QNET_DELIVERY_TYPE.UNRELIABLE)
+		{
+			_received_packet.struct.OnReceive(self, _incoming_connection);	
+		}
 	}
 	
 	var __InternalConnectionCheck = function() 

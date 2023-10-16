@@ -6,6 +6,7 @@ enum QCONNECTION_REQUEST_STATUS
 	FAILED_ALREADY_CONNECTED,
 }
 
+/// QNet System Packet - Processed by both a Remote Peer and the Local Peer in establishing a virtual connection.
 /// @param {Enum.QCONNECTION_REQUEST_STATUS} _status
 /// @param {Real} _assigned_id
 function QConnectionRequest(_status = buffer_u8, _assigned_id = buffer_s16) constructor
@@ -26,11 +27,12 @@ function QConnectionRequest(_status = buffer_u8, _assigned_id = buffer_s16) cons
 			
 			try
 			{
-				var _created_connection = _qnetwork.AddConnection(_ip, _port);
-				var _response = new QConnectionRequest(QCONNECTION_REQUEST_STATUS.SUCCESS, _created_connection.id);
+				var _connection = _qnetwork.AddConnection(_ip, _port);
+				var _response = new QConnectionRequest(QCONNECTION_REQUEST_STATUS.SUCCESS, _connection.id);
 				_created_connection.SendPacket(_response);
 				_created_connection.OnConnect();
-				_qnetwork.OnPeerConnected(_created_connection);
+				
+				_qnetwork.OnPeerConnected(_connection);
 			}
 			catch (_exception)
 			{
