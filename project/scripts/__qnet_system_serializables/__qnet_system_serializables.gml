@@ -6,6 +6,8 @@ enum QCONNECTION_REQUEST_STATUS
 	FAILED_ALREADY_CONNECTED,
 }
 
+/// @param {Enum.QCONNECTION_REQUEST_STATUS} _status
+/// @param {Real} _assigned_id
 function QConnectionRequest(_status = buffer_u8, _assigned_id = buffer_s16) constructor
 {
 	__status      = _status; 

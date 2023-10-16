@@ -1,6 +1,7 @@
 function QNetworkConnection(_id, _ip, _port, _qnet_manager) constructor
 {
-	enum QCONNECTION_STATUS { DISCONNECTED, CONNECTED, CONNECTING, TIMEOUT }
+	enum QCONNECTION_STATUS     { DISCONNECTED,   CONNECTED,   CONNECTING,   TIMEOUT }
+	__QCONNECTION_STATUS_TEXT = ["Disconnected", "Connected", "Connecting", "Timeout"];
 	
 	id					    = _id;
 	ip						= _ip;
@@ -91,5 +92,10 @@ function QNetworkConnection(_id, _ip, _port, _qnet_manager) constructor
 		}
 		
 		status = QCONNECTION_STATUS.DISCONNECTED;
+	}
+	
+	toString = function()
+	{
+		return $"[Connection] {id} - {__QCONNECTION_STATUS_TEXT[status]} - {ping}";	
 	}
 }

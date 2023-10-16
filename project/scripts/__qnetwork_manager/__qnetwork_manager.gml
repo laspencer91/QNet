@@ -1,8 +1,11 @@
 function QNetworkManager(_serializable_structs) constructor
 {
-	#macro QNET_EXCEPTION_CREATE_SOCKET_FAILED "Create Socket Failed"
-	#macro QNET_EXCEPTION_MAX_CONNECTIONS      "Max Connections Reached"
-	#macro QNET_EXCEPTION_ALREADY_CONNECTED    "Already Connected"
+	#macro QNET_EXCEPTION_NETWORK_ALREADY_STARTED "Network Already Started"
+	#macro QNET_EXCEPTION_CREATE_SOCKET_FAILED    "Create Socket Failed"
+	#macro QNET_EXCEPTION_MAX_CONNECTIONS         "Max Connections Reached"
+	#macro QNET_EXCEPTION_ALREADY_CONNECTED       "Already Connected"
+
+	is_running = false;
 	
 	__port = 3000;
 	__max_connections = 1;
@@ -18,9 +21,22 @@ function QNetworkManager(_serializable_structs) constructor
 		}
 	});
 	
-	/// Start the network. This initializes a socket and begins listening for incoming messages. THROWS - QNET_EXCEPTION_CREATE_SOCKET_FAILED
+	/// Start the network. This initializes a socket and begins listening for incoming messages. 
+	/// THROWS [QNET_EXCEPTION_CREATE_SOCKET_FAILED] - If a socket could not be created. 
+	/// THROWS [QNET_EXCEPTION_NETWORK_ALREADY_STARTED] - If this network manager is already running.
 	function Start(_max_connections, _port = undefined)
 	{
+		if (is_running)
+		{
+			q_warn("Cannot Start(). The Network Manager is already running.");
+			throw(QNET_EXCEPTION_NETWORK_ALREADY_STARTED);
+		}
+		if (__socket != undefined)
+		{
+			q_warn("Cannot Start(). The Network Manager already has a socket initialized.");
+			throw(QNET_EXCEPTION_NETWORK_ALREADY_STARTED);
+		}
+		
 		var _socket_result;
 		// Find Port and attempt to create scoket
 		if (_port != undefined)
@@ -54,6 +70,8 @@ function QNetworkManager(_serializable_structs) constructor
 		
 		__connection_status_check.Start();
 		
+		is_running = true;
+		
 		return __port;
 	}
 	
@@ -76,19 +94,25 @@ function QNetworkManager(_serializable_structs) constructor
 		ds_map_clear(__connection_id_lookup);
 		
 		// Destroy Socket
-		network_destroy(__socket);
-		__socket = undefined;
+		if (__socket != undefined)
+		{
+			network_destroy(__socket);
+			__socket = undefined;
+		}
+		
+		is_running = false;
 		
 		q_log("NetworkManager has shutdown.");
 	}
 	
 	/// Begin a connection attempt to an ip and port.
+	/// THROWS [QNET_EXCEPTION_ALREADY_CONNECTED] - if a connection to the provided address already exists.
 	function Connect(_ip, _port) 
 	{
 		if (GetConnection(_ip, _port) != undefined)
 		{
-			q_warn("Attempting to send a connection request to a peer which we are already connected to.");
-			return;	
+			q_warn($"Connection Request Failed. Already connected to {_ip}:{_port}.");
+			throw (QNET_EXCEPTION_ALREADY_CONNECTED);
 		}
 		var _new_connection = AddConnection(_ip, _port);
 		_new_connection.AttemptConnection();
@@ -273,4 +297,20 @@ function QNetworkManager(_serializable_structs) constructor
 	}
 	
 	#endregion --------------------- Overridable Callback Functions -------------------------------------------
+	
+	toString = function()
+	{
+		var _string = $"--- NETWORK MANAGER ---\n";
+		var _status_text = is_running ? "RUNNING" : "STOPPED";
+		var _active_connection_slots = ds_map_values_to_array(__connection_id_lookup);
+		var _num_active_connections = !is_undefined(_active_connection_slots) ? array_length(_active_connection_slots) : 0;
+		_string += $"Network is {_status_text}\n";
+		_string += $"--- {_num_active_connections}/{__max_connections} Active Connections ---\n"
+		for (var _i = 0; _i < _num_active_connections; _i++)
+		{
+			_string += $"{__connections[_active_connection_slots[_i]]}\n";
+		}
+		
+		return _string;
+	}
 }
