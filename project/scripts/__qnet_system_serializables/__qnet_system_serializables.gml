@@ -29,8 +29,8 @@ function QConnectionRequest(_status = buffer_u8, _assigned_id = buffer_s16) cons
 			{
 				var _connection = _qnetwork.AddConnection(_ip, _port);
 				var _response = new QConnectionRequest(QCONNECTION_REQUEST_STATUS.SUCCESS, _connection.id);
-				_created_connection.SendPacket(_response);
-				_created_connection.OnConnect();
+				_connection.SendPacket(_response);
+				_connection.OnConnect();
 				
 				_qnetwork.OnPeerConnected(_connection);
 			}

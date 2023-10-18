@@ -207,56 +207,51 @@ function QNetworkManager(_serializable_structs) constructor
 			return;
 		}
 		
-		var _id = async_load[? "id"];
-		var _ip = async_load[? "ip"];
-		var _port = async_load[? "port"];
+		var _id     = async_load[? "id"];
+		var _ip     = async_load[? "ip"];
+		var _port   = async_load[? "port"];
 		var _buffer = async_load[? "buffer"];
 			
-		var _received_packet = __serializer.Deserialize(_buffer);
-
+		var _received_packet    = __serializer.Deserialize(_buffer);
+		var _delivery_type      = _received_packet.header_data.delivery_type;
+		var _received_sequence  = _received_packet.header_data.sequence;
+		var _is_newest_sequence = false;
+		
 		var _incoming_connection = GetConnection(_ip, _port);
 		if (_incoming_connection != undefined)
-		{	// Update the connections last communication time
+		{
 			_incoming_connection.last_data_received_time = current_time;
+			
+			_is_newest_sequence = _received_sequence > _incoming_connection.incoming_sequence ||
+								  _incoming_connection.incoming_sequence - _received_sequence > 65530
 		}
 		else if (instanceof(_received_packet.struct) != _name_of_connection_req_packet)
 		{	// Do not process packets from unconnected addresses unless it is a connection request packet!
 			q_warn("Recieving packets from an unconnected client!");
 			return;
 		}
+		
 		///////////////////////////////////////////////////
 		//               Process the packet
 		///////////////////////////////////////////////////
-		var _delivery_type     = _received_packet.header_data.delivery_type;
-		var _received_sequence = _received_packet.header_data.sequence;
-		
-		if (_incoming_connection.incoming_sequence - _received_sequence > 65000)
-		{
-			// The sequence numbers have rolled back around. 
-			// EX: Previous Sequence 255 - New Sequence 0 << Rolled back to zero.
-			_incoming_connection.incoming_sequence = -1;
-		}
-		
-		// Detect sequence number rollback.
-		var _packet_is_newer = _received_sequence > _incoming_connection.incoming_sequence;
-		if (_packet_is_newer)
-		{
-			_incoming_connection.incoming_sequence = _received_sequence;
-		}
-		
-		// Handle Sequenced Delivery Type
 		if (_delivery_type == QNET_DELIVERY_TYPE.SEQUENCED)
 		{
+			q_log($"{_received_sequence} : {_incoming_connection.incoming_sequence}");
 			// If a packet with newer data beat this one here, forget about it.
-			if (_packet_is_newer)
+			if (_is_newest_sequence)
 			{
 				_received_packet.struct.OnReceive(self, _incoming_connection);
 			}
 		}
-		// Handle standard unreliable packet types.
 		if (_delivery_type == QNET_DELIVERY_TYPE.UNRELIABLE)
 		{
 			_received_packet.struct.OnReceive(self, _incoming_connection);	
+		}
+		
+		// Update local incoming sequence only if this received packet is newer than the previous.
+		if (_is_newest_sequence)
+		{
+			_incoming_connection.incoming_sequence = _received_sequence
 		}
 	}
 	

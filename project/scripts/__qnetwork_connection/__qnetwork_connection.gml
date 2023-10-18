@@ -83,7 +83,7 @@ function QNetworkConnection(_id, _ip, _port, _qnet_manager) constructor
 			__heartbeat_packet.is_reply = false;
 			__heartbeat_packet.sent_time = current_time;
 			// Serialize and send.
-			SendPacket(__heartbeat_packet);
+			SendPacket(__heartbeat_packet, QNET_DELIVERY_TYPE.SEQUENCED);
 		}
 	}
 
@@ -107,6 +107,6 @@ function QNetworkConnection(_id, _ip, _port, _qnet_manager) constructor
 	
 	toString = function()
 	{
-		return $"[Connection] {id} - {__QCONNECTION_STATUS_TEXT[status]} - {ping}";	
+		return $"[Connection] {id} - {__QCONNECTION_STATUS_TEXT[status]} - {outgoing_sequence} - {ping}";	
 	}
 }
