@@ -20,10 +20,10 @@ function QNetworkConnection(_id, _ip, _port, _qnet_manager) constructor
 	__connect_attempts = 0;
 	// The maximum amount of times to resend a connection request before timing out.
 	__max_connection_attempts = 5;
-	// Most recently received sequence number from this connection.
-	incoming_sequence = -1;
 	// Sent and incremented with each packet sent.
 	outgoing_sequence = 0;
+	// Most recently received sequence number from this connection.
+	current_ack = -1;
 	
 	function OnConnect()
 	{

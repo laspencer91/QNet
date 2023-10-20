@@ -1,6 +1,6 @@
 function QNetworkManager(_serializable_structs) constructor
 {
-	enum QNET_DELIVERY_TYPE { UNRELIABLE, SEQUENCED }
+	enum QNET_DELIVERY_TYPE { UNRELIABLE, SEQUENCED, RELIABLE_SEQENCED }
 	#macro QNET_EXCEPTION_NETWORK_ALREADY_STARTED "Network Already Started"
 	#macro QNET_EXCEPTION_CREATE_SOCKET_FAILED    "Create Socket Failed"
 	#macro QNET_EXCEPTION_MAX_CONNECTIONS         "Max Connections Reached"
@@ -23,6 +23,8 @@ function QNetworkManager(_serializable_structs) constructor
 		header_config: {
 			delivery_type: buffer_u8,
 			sequence: QNET_SEQ_BUFFER_TYPE,
+			ack: QNET_SEQ_BUFFER_TYPE,
+			ack_bits: buffer_u16
 		}
 	});
 	
@@ -91,7 +93,7 @@ function QNetworkManager(_serializable_structs) constructor
 		// Disconnect all connections. Clear out our array.
 		for (var _i = 0; _i < array_length(__connections); _i++)
 		{
-			var _iconnection = __connections[_i];
+			var _iconnection/*: QNetworkConnection*/ = __connections[_i];
 			if (is_undefined(_iconnection)) continue;
 			_iconnection.Disconnect();
 		}
@@ -151,7 +153,7 @@ function QNetworkManager(_serializable_structs) constructor
 		}
 		
 		show_debug_message($"Added new connection: {_new_connection}");
-		return _new_connection
+		return _new_connection;
 	}
 	
 	/// Effectively disconnects a connection and removes it from the QNetworks tracking. OnPeerDisconnected() will not be called.
@@ -214,7 +216,9 @@ function QNetworkManager(_serializable_structs) constructor
 			
 		var _received_packet    = __serializer.Deserialize(_buffer);
 		var _delivery_type      = _received_packet.header_data.delivery_type;
-		var _received_sequence  = _received_packet.header_data.sequence;
+		var _incoming_sequence  = _received_packet.header_data.sequence;		// Incoming packets' sequence value.
+		var _incoming_ack       = _received_packet.header_data.ack;				// Most recently acked packet from sender
+		var _incoming_ack_bits  = _received_packet.header_data.ack_bits;		// Bits containing flags for previous acks
 		var _is_newest_sequence = false;
 		
 		var _incoming_connection = GetConnection(_ip, _port);
@@ -222,8 +226,8 @@ function QNetworkManager(_serializable_structs) constructor
 		{
 			_incoming_connection.last_data_received_time = current_time;
 			
-			_is_newest_sequence = _received_sequence > _incoming_connection.incoming_sequence ||
-								  _incoming_connection.incoming_sequence - _received_sequence > 65530
+			_is_newest_sequence = _incoming_sequence > _incoming_connection.current_ack ||
+								  _incoming_connection.current_ack - _incoming_sequence > 65530;
 		}
 		else if (instanceof(_received_packet.struct) != _name_of_connection_req_packet)
 		{	// Do not process packets from unconnected addresses unless it is a connection request packet!
@@ -236,12 +240,31 @@ function QNetworkManager(_serializable_structs) constructor
 		///////////////////////////////////////////////////
 		if (_delivery_type == QNET_DELIVERY_TYPE.SEQUENCED)
 		{
-			q_log($"{_received_sequence} : {_incoming_connection.incoming_sequence}");
+			q_log($"{_incoming_sequence} : {_incoming_connection.current_ack}");
 			// If a packet with newer data beat this one here, forget about it.
 			if (_is_newest_sequence)
 			{
 				_received_packet.struct.OnReceive(self, _incoming_connection);
 			}
+		}
+		if (_delivery_type == QNET_DELIVERY_TYPE.RELIABLE_SEQENCED)
+		{
+			// TODO: IMPLEMENT INCOMING PACKET HANDLING
+			// Get ACK number of the packet
+			// Check - Have we processed the previous packet?
+			// No? Add this packet to the ACKED packets DS. Do not process.
+			// YES? Process the packet and add to the ACKED packets DS
+			// Update the Connections 'current_ack' with this new value.
+			
+			// Because it is sequenced -> it should not process a packet until the previous one is received.
+			// Because it is reliable -> It should save packets received out of order, and process them
+			// when the completed order is received. And the completed order will be received because
+			// if a packet is lost, the sending connection will be notified via 'ack_bits' and will
+			// resend the packet.
+			// The list of received and stored packets should exist on the Connection Object.
+			// The list of sent but UNACKED packets should exist on the Connection Object.
+			// When it is detected that a packet did not make it to its location, we should resend it.
+			
 		}
 		if (_delivery_type == QNET_DELIVERY_TYPE.UNRELIABLE)
 		{
@@ -251,7 +274,7 @@ function QNetworkManager(_serializable_structs) constructor
 		// Update local incoming sequence only if this received packet is newer than the previous.
 		if (_is_newest_sequence)
 		{
-			_incoming_connection.incoming_sequence = _received_sequence
+			_incoming_connection.current_ack = _incoming_sequence;
 		}
 	}
 	
@@ -336,7 +359,7 @@ function QNetworkManager(_serializable_structs) constructor
 		var _active_connection_slots = ds_map_values_to_array(__connection_id_lookup);
 		var _num_active_connections = !is_undefined(_active_connection_slots) ? array_length(_active_connection_slots) : 0;
 		_string += $"Network is {_status_text}\n";
-		_string += $"--- {_num_active_connections}/{__max_connections} Active Connections ---\n"
+		_string += $"--- {_num_active_connections}/{__max_connections} Active Connections ---\n";
 		for (var _i = 0; _i < _num_active_connections; _i++)
 		{
 			_string += $"{__connections[_active_connection_slots[_i]]}\n";
