@@ -52,10 +52,51 @@ function QNetworkConnection(_id, _ip, _port, _qnet_manager) constructor
 		if (outgoing_sequence++ > 65535)
 			outgoing_sequence = 0;
 		
-		var _buffer = __serializer.Serialize(_struct_instance, { 
-			delivery_type: _delivery_type, 
-			sequence: outgoing_sequence
-		});
+		var _ack_bits = 0;
+		var _buffer   = undefined;
+		
+		if (_delivery_type == QNET_DELIVERY_TYPE.RELIABLE_SEQENCED)
+		{
+			/*
+				var _ack_bits = 0;
+				
+				for (var _i = 0; _i < 32; _i++)
+				{
+					_ack_bits |= (_i % 2) << _i;
+				}
+				
+				for (var _i = 0; _i < 32; _i++)
+				{
+					show_debug_message($"{_i} = {_ack_bits & (1 << _i) != 0}")
+				}
+			*/
+			for (var _i = 0; _i < 32; _i++)
+			{
+				var _inflight_packet = __inflight_ack_packets[? sequence - _i];
+				_ack_bits |= (_inflight_packet != undefined ? 1 : 0) << _i;
+			}
+			
+			_buffer = __serializer.Serialize(_struct_instance, { 
+				delivery_type: _delivery_type, 
+				sequence: outgoing_sequence,
+				ack: current_ack,
+				ack_bits: _ack_bits
+			});
+			
+			__inflight_ack_packets[? sequence] = {
+				buffer: _buffer,
+				buffer_size: buffer_get_size(_buffer),
+			}
+		}
+		else
+		{
+			_buffer = __serializer.Serialize(_struct_instance, { 
+				delivery_type: _delivery_type, 
+				sequence: outgoing_sequence,
+				ack: current_ack,
+				ack_bits: _ack_bits
+			});
+		}
 		network_send_udp(__socket, ip, port, _buffer, buffer_get_size(_buffer));	
 	}
 	
@@ -89,6 +130,23 @@ function QNetworkConnection(_id, _ip, _port, _qnet_manager) constructor
 
 	// The heartbeat keeps the connection alive by sending a keep alive packet every couple seconds.
 	__pulse_timesource = new QSimpleTimesource(heartbeat_frequency, __InternalPulse).Start();
+	
+	__inflight_ack_packets = ds_map_create();
+	
+	function RecognizeAck(_ack_number)
+	{
+		__inflight_ack_packets[? _ack_number] = undefined;
+	}
+	
+	function HandleUnacked(_ack_number)
+	{
+		var _packet = __inflight_ack_packets[? _ack_number];
+		var _buffer = __serializer.Serialize(_packet, { 
+			delivery_type: QNET_DELIVERY_TYPE.RELIABLE_SEQENCED, 
+			sequence: _ack_number
+		});
+		network_send_udp(__socket, ip, port, _buffer, buffer_get_size(_buffer));	
+	}
 	
 	/// Disconnects and shuts down communication to this connection. Calling this effectively destroys the connection
 	/// and this instance cannot be reused. If this connection is currently connected, will also send a packet to the 

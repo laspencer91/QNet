@@ -265,6 +265,19 @@ function QNetworkManager(_serializable_structs) constructor
 			// The list of sent but UNACKED packets should exist on the Connection Object.
 			// When it is detected that a packet did not make it to its location, we should resend it.
 			
+			for (var _i = 0; _i < 32; _i++)
+			{
+				var _acked = _incoming_ack_bits << _i;
+				if (_acked)
+				{
+					_incoming_connection.RecognizeAck(_incoming_ack - _i);
+				}
+				else if (_i % 2 == 0)
+				{
+					// Handle Resend?
+					_incoming_connection.HandleUnacked(_incoming_ack - _i);
+				}
+			}
 		}
 		if (_delivery_type == QNET_DELIVERY_TYPE.UNRELIABLE)
 		{
