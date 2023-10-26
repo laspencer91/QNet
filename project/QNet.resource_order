@@ -12,6 +12,7 @@
   "ResourceOrderSettings": [
     {"name":"__qnetwork_connection","order":2,"path":"scripts/__qnetwork_connection/__qnetwork_connection.yy",},
     {"name":"__qnetwork_manager","order":1,"path":"scripts/__qnetwork_manager/__qnetwork_manager.yy",},
+    {"name":"__qnetwork_reliability_handler","path":"scripts/__qnetwork_reliability_handler/__qnetwork_reliability_handler.yy","order":3,},
     {"name":"MultiClientGetClientID","order":1,"path":"scripts/MultiClientGetClientID/MultiClientGetClientID.yy",},
     {"name":"__qsignals_manager_class","order":1,"path":"scripts/__qsignals_manager_class/__qsignals_manager_class.yy",},
     {"name":"rm_qnet_test","order":1,"path":"rooms/rm_qnet_test/rm_qnet_test.yy",},
