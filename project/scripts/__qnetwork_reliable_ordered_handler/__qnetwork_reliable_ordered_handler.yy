@@ -1,9 +1,9 @@
 {
   "$GMScript":"",
-  "%Name":"__qnetwork_manager",
+  "%Name":"__qnetwork_reliable_ordered_handler",
   "isCompatibility":false,
   "isDnD":false,
-  "name":"__qnetwork_manager",
+  "name":"__qnetwork_reliable_ordered_handler",
   "parent":{
     "name":"QNetworkManager",
     "path":"folders/QNet/QNetworkManager.yy",

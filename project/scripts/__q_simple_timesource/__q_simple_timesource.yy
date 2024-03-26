@@ -1,11 +1,13 @@
 {
-  "resourceType": "GMScript",
-  "resourceVersion": "1.0",
-  "name": "__q_simple_timesource",
-  "isCompatibility": false,
-  "isDnD": false,
-  "parent": {
-    "name": "QTimesource",
-    "path": "folders/QNet/QTimesource.yy",
+  "$GMScript":"",
+  "%Name":"__q_simple_timesource",
+  "isCompatibility":false,
+  "isDnD":false,
+  "name":"__q_simple_timesource",
+  "parent":{
+    "name":"QTimesource",
+    "path":"folders/QNet/QTimesource.yy",
   },
+  "resourceType":"GMScript",
+  "resourceVersion":"2.0",
 }

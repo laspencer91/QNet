@@ -1,11 +1,13 @@
 {
-  "resourceType": "GMScript",
-  "resourceVersion": "1.0",
-  "name": "__q_logging",
-  "isCompatibility": false,
-  "isDnD": false,
-  "parent": {
-    "name": "QLogging",
-    "path": "folders/QNet/QLogging.yy",
+  "$GMScript":"",
+  "%Name":"__q_logging",
+  "isCompatibility":false,
+  "isDnD":false,
+  "name":"__q_logging",
+  "parent":{
+    "name":"QLogging",
+    "path":"folders/QNet/QLogging.yy",
   },
+  "resourceType":"GMScript",
+  "resourceVersion":"2.0",
 }

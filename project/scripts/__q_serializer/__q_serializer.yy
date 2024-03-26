@@ -1,11 +1,13 @@
 {
-  "resourceType": "GMScript",
-  "resourceVersion": "1.0",
-  "name": "__q_serializer",
-  "isCompatibility": false,
-  "isDnD": false,
-  "parent": {
-    "name": "QSerializer",
-    "path": "folders/QNet/QSerializer.yy",
+  "$GMScript":"",
+  "%Name":"__q_serializer",
+  "isCompatibility":false,
+  "isDnD":false,
+  "name":"__q_serializer",
+  "parent":{
+    "name":"QSerializer",
+    "path":"folders/QNet/QSerializer.yy",
   },
+  "resourceType":"GMScript",
+  "resourceVersion":"2.0",
 }

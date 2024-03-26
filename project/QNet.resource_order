@@ -1,5 +1,5 @@
 {
-  "FolderOrderSettings": [
+  "FolderOrderSettings":[
     {"name":"QNet","order":1,"path":"folders/QNet.yy",},
     {"name":"QLogging","order":2,"path":"folders/QNet/QLogging.yy",},
     {"name":"QNetworkManager","order":6,"path":"folders/QNet/QNetworkManager.yy",},
@@ -9,7 +9,7 @@
     {"name":"QTimesource","order":7,"path":"folders/QNet/QTimesource.yy",},
     {"name":"TESTING","order":4,"path":"folders/TESTING.yy",},
   ],
-  "ResourceOrderSettings": [
+  "ResourceOrderSettings":[
     {"name":"__qnetwork_connection","order":2,"path":"scripts/__qnetwork_connection/__qnetwork_connection.yy",},
     {"name":"__qnetwork_manager","order":1,"path":"scripts/__qnetwork_manager/__qnetwork_manager.yy",},
     {"name":"MultiClientGetClientID","order":1,"path":"scripts/MultiClientGetClientID/MultiClientGetClientID.yy",},

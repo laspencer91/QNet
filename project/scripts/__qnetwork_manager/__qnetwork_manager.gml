@@ -1,5 +1,7 @@
-function QNetworkManager(_serializable_structs) constructor
+function QNetworkManager(_protocol_id, _serializable_structs) constructor
 {
+	protocol_id = _protocol_id;
+	
 	#macro QNET_EXCEPTION_NETWORK_ALREADY_STARTED "Network Already Started"
 	#macro QNET_EXCEPTION_CREATE_SOCKET_FAILED    "Create Socket Failed"
 	#macro QNET_EXCEPTION_MAX_CONNECTIONS         "Max Connections Reached"
@@ -17,7 +19,7 @@ function QNetworkManager(_serializable_structs) constructor
 	__serializer = new QSerializer({
 		structs: _serializable_structs,
 		header_config: {
-			reliable: buffer_bool,
+			protocol_id: buffer_u16,
 		}
 	});
 	
@@ -187,7 +189,8 @@ function QNetworkManager(_serializable_structs) constructor
 	/// Send a packet to an IP and PORT.
 	function SendPacketToAddress(_struct_instance, _ip, _port)
 	{
-		var _buffer = __serializer.Serialize(_struct_instance, { reliable: false });
+		q_log(protocol_id);
+		var _buffer = __serializer.Serialize(_struct_instance, { protocol_id: protocol_id });
 		network_send_udp(__socket, _ip, _port, _buffer, buffer_get_size(_buffer));	
 	}
 	
@@ -208,7 +211,12 @@ function QNetworkManager(_serializable_structs) constructor
 		var _buffer = async_load[? "buffer"];
 			
 		var _received_packet = __serializer.Deserialize(_buffer);
-		var _is_reliable = _received_packet.header_data.reliable;
+		var _protocol_id = _received_packet.header_data.protocol_id;
+
+		if (_protocol_id != protocol_id) {
+			q_warn($"Recieving packets from a source with incorrect protocol id. [INCOMING PROTO ID: {_protocol_id}]");	
+			return;
+		}
 
 		var _incoming_connection = GetConnection(_ip, _port);
 		if (_incoming_connection != undefined)

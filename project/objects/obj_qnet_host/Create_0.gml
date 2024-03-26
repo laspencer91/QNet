@@ -1,8 +1,12 @@
 show_debug_log(true);
 
 role = "PEER";
-
-network = new QNetworkManager([QConnectionRequest, QConnectionHeartbeat, QConnectionDisconnect]);
+game_protocol_id = 54232;
+network = new QNetworkManager(game_protocol_id, [
+	QConnectionRequest, 
+	QConnectionHeartbeat, 
+	QConnectionDisconnect
+]);
 
 network.OnPeerConnected = function(_connection) 
 {

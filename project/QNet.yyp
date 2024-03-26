@@ -1,33 +1,33 @@
 {
-  "resourceType": "GMProject",
-  "resourceVersion": "1.7",
-  "name": "QNet",
-  "AudioGroups": [
-    {"resourceType":"GMAudioGroup","resourceVersion":"1.3","name":"audiogroup_default","targets":-1,},
+  "$GMProject":"",
+  "%Name":"QNet",
+  "AudioGroups":[
+    {"$GMAudioGroup":"","%Name":"audiogroup_default","name":"audiogroup_default","resourceType":"GMAudioGroup","resourceVersion":"2.0","targets":-1,},
   ],
-  "configs": {
-    "children": [],
-    "name": "Default",
+  "configs":{
+    "children":[],
+    "name":"Default",
   },
-  "defaultScriptType": 1,
-  "Folders": [
-    {"resourceType":"GMFolder","resourceVersion":"1.0","name":"QNet","folderPath":"folders/QNet.yy",},
-    {"resourceType":"GMFolder","resourceVersion":"1.0","name":"QLogging","folderPath":"folders/QNet/QLogging.yy",},
-    {"resourceType":"GMFolder","resourceVersion":"1.0","name":"QNetworkManager","folderPath":"folders/QNet/QNetworkManager.yy",},
-    {"resourceType":"GMFolder","resourceVersion":"1.0","name":"QSerializer","folderPath":"folders/QNet/QSerializer.yy",},
-    {"resourceType":"GMFolder","resourceVersion":"1.0","name":"QSignals","folderPath":"folders/QNet/QSignals.yy",},
-    {"resourceType":"GMFolder","resourceVersion":"1.0","name":"Scripts","folderPath":"folders/QNet/QSignals/Scripts.yy",},
-    {"resourceType":"GMFolder","resourceVersion":"1.0","name":"QTimesource","folderPath":"folders/QNet/QTimesource.yy",},
-    {"resourceType":"GMFolder","resourceVersion":"1.0","name":"TESTING","folderPath":"folders/TESTING.yy",},
-    {"resourceType":"GMFolder","resourceVersion":"1.0","name":"MultiClient","folderPath":"folders/TESTING/MultiClient.yy",},
+  "defaultScriptType":1,
+  "Folders":[
+    {"$GMFolder":"","%Name":"QNet","folderPath":"folders/QNet.yy","name":"QNet","resourceType":"GMFolder","resourceVersion":"2.0",},
+    {"$GMFolder":"","%Name":"QLogging","folderPath":"folders/QNet/QLogging.yy","name":"QLogging","resourceType":"GMFolder","resourceVersion":"2.0",},
+    {"$GMFolder":"","%Name":"QNetworkManager","folderPath":"folders/QNet/QNetworkManager.yy","name":"QNetworkManager","resourceType":"GMFolder","resourceVersion":"2.0",},
+    {"$GMFolder":"","%Name":"QSerializer","folderPath":"folders/QNet/QSerializer.yy","name":"QSerializer","resourceType":"GMFolder","resourceVersion":"2.0",},
+    {"$GMFolder":"","%Name":"QSignals","folderPath":"folders/QNet/QSignals.yy","name":"QSignals","resourceType":"GMFolder","resourceVersion":"2.0",},
+    {"$GMFolder":"","%Name":"Scripts","folderPath":"folders/QNet/QSignals/Scripts.yy","name":"Scripts","resourceType":"GMFolder","resourceVersion":"2.0",},
+    {"$GMFolder":"","%Name":"QTimesource","folderPath":"folders/QNet/QTimesource.yy","name":"QTimesource","resourceType":"GMFolder","resourceVersion":"2.0",},
+    {"$GMFolder":"","%Name":"TESTING","folderPath":"folders/TESTING.yy","name":"TESTING","resourceType":"GMFolder","resourceVersion":"2.0",},
+    {"$GMFolder":"","%Name":"MultiClient","folderPath":"folders/TESTING/MultiClient.yy","name":"MultiClient","resourceType":"GMFolder","resourceVersion":"2.0",},
   ],
-  "IncludedFiles": [],
-  "isEcma": false,
-  "LibraryEmitters": [],
-  "MetaData": {
-    "IDEVersion": "2023.8.0.98",
+  "IncludedFiles":[],
+  "isEcma":false,
+  "LibraryEmitters":[],
+  "MetaData":{
+    "IDEVersion":"2024.2.0.132",
   },
-  "resources": [
+  "name":"QNet",
+  "resources":[
     {"id":{"name":"__qnetwork_connection","path":"scripts/__qnetwork_connection/__qnetwork_connection.yy",},},
     {"id":{"name":"__q_logging","path":"scripts/__q_logging/__q_logging.yy",},},
     {"id":{"name":"__q_simple_timesource","path":"scripts/__q_simple_timesource/__q_simple_timesource.yy",},},
@@ -41,11 +41,13 @@
     {"id":{"name":"__qsignals_manager_class","path":"scripts/__qsignals_manager_class/__qsignals_manager_class.yy",},},
     {"id":{"name":"rm_qnet_test","path":"rooms/rm_qnet_test/rm_qnet_test.yy",},},
   ],
-  "RoomOrderNodes": [
+  "resourceType":"GMProject",
+  "resourceVersion":"2.0",
+  "RoomOrderNodes":[
     {"roomId":{"name":"rm_qnet_test","path":"rooms/rm_qnet_test/rm_qnet_test.yy",},},
   ],
-  "templateType": "game",
-  "TextureGroups": [
-    {"resourceType":"GMTextureGroup","resourceVersion":"1.3","name":"Default","autocrop":true,"border":2,"compressFormat":"bz2","directory":"","groupParent":null,"isScaled":true,"loadType":"default","mipsToGenerate":0,"targets":-1,},
+  "templateType":"game",
+  "TextureGroups":[
+    {"$GMTextureGroup":"","%Name":"Default","autocrop":true,"border":2,"compressFormat":"bz2","customOptions":"","directory":"","groupParent":null,"isScaled":true,"loadType":"default","mipsToGenerate":0,"name":"Default","resourceType":"GMTextureGroup","resourceVersion":"2.0","targets":-1,},
   ],
 }
