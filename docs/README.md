@@ -1,53 +1,33 @@
-# QSignals GameMaker Library
+# QNET GameMaker Library
+
+_STATUS_: In Progress
 
 ---
 
-The QSignals library simplifies game event programming in GameMaker Studio 2.3 by eliminating excessive [coupling](https://w.wiki/7Yz6). This documentation will guide you through the usage of the library and provide examples to help you get started.
-
-## Introduction
-
-QSignals is a lightweight library designed to streamline event-driven programming in your GameMaker projects. It allows you to emit signals and create listeners for those specific signals. There are unlimited ways to put this library to use, so get creative! 
-
-> See the [Examples](#examples) for some cool ideas.
-
-> See the [Video](https://youtu.be/c0b2Gjw_Hw8) for a quick intro of the library.
-
-## Installation
-
-1. Add the asset to your library: [GameMaker Marketplace](https://marketplace.gamemaker.io/assets/11836/qsignals)
-2. Import the library into your GameMaker project.
-    - (In GameMaker) -> _Marketplace_ -> _My Library_ -> _QSignals_ -> _Import_ -> _Add All_ -> **Import**
-3. Ensure that a folder named QSignals was added to your project. You are ready to go!
+QNet is a UDP GameMaker library that handles connections between clients and data serialization. It can be used with QNET - Node if you want to use Node for a backend. The data serialization is easy to setup so you do not need to worry about writing and reading from buffers yourself. It supports nested serializable types and arrays.
 
 ## At A Glance
 
-> **Three Functions** to change your game development experience! ***The work is performed behind the scenes.***
 
-#### **Single Parameter**
-
-```javascript
-qsignal_emit("player_death", player_score);
-
-qsignal_listen("player_death", function(_score) {
-    // Your code here
-    show_debug_message("Player died! Score: " + string(score));
-});
-
-qsignal_stop_listening("player_death");
-```
-
-#### **Multiple Parameters**
+#### **Example**
 
 ```javascript
-qsignal_emit("player_death", { score: player_score, cause: "spike" });
+function SerializableFunction1(_name = buffer_u8) constructor {
+  name = _name;
+  function OnRecieve() {
+    ... do something with name
+  }
+}
+function SerializableFunction1(_array_of_x_pos = [buffer_u8], _array_of_y_pos = [_position_y]) constructor {
+  array_of_x_pos = _array_of_x_pos;
+  array_of_y_pos = _array_of_y_pos;
+  function OnReceive() {
+    for (var i = 0; i < array_length(array_of_x_pos); i++) {
+      update_position(array_of_x_pos[i], array_of_y_pos[i]);
+    }
+  }
+}
 
-qsignal_listen("player_death", function(_payload) {
-    // Your code here
-    var _score = _payload.score;
-    var _cause = _payload.cause;
-    show_debug_message("Player died! Score: " + _score);
-    show_debug_message("He died from " + _cause);
-});
-
-qsignal_stop_listening("player_death");
+var network_manager = new QNetManager([SerializableFunction1, SerializableFunction2]);
+network_manager.start(3000);
 ```
