@@ -97,4 +97,6 @@ The schema hash is the first 8 hex digits of the MD5 of a string, read as a u32:
     "|" + Name + ":" + ( "manual" | for each field in name order: field + "=" + typeString + "," )
 ```
 
-`typeString` is the GameMaker buffer constant as a decimal number (`buffer_u8` is `1`, `buffer_string` is `11`), `[` + inner + `]` for arrays, or the struct's name.
+`typeString` is one of `u8 s8 u16 s16 u32 s32 u64 f16 f32 f64 bool string`, `[` + inner + `]` for arrays, or the struct's name.
+
+Example: `qnet2|PlayerState:player_id=u8,px=s16,py=s16,|Snapshot:manual`

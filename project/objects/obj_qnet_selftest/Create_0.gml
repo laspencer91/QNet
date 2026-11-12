@@ -52,6 +52,21 @@ buffer_write(_junk, buffer_u8, 250);
 Check("serializer: unknown type id reads as undefined", _serializer.Deserialize(_junk) == undefined);
 buffer_delete(_junk);
 
+// Cross-check with QNet-Node: these values come from its test suite (tests/serializer.test.ts),
+// so passing means GameMaker and Node agree on the wire byte for byte.
+Check("QNet-Node agrees on the schema hash", _serializer.schema_hash == 2993484286, $"GameMaker: {_serializer.schema_hash}");
+_buffer = _serializer.Serialize(_blob);
+var _hex_digits = "0123456789abcdef";
+var _hex = "";
+for (var _i = 0; _i < buffer_get_size(_buffer); _i++)
+{
+	var _byte = buffer_peek(_buffer, _i, buffer_u8);
+	_hex += string_char_at(_hex_digits, (_byte >> 4) + 1) + string_char_at(_hex_digits, (_byte & 15) + 1);
+}
+buffer_delete(_buffer);
+var _node_hex = "04adfa5c6d454a9340010300030001020300000100ff68656c6c6f20776f726c64006079fefffbff0700020001000200fdff0400";
+Check("QNet-Node produces the same TestBlob bytes", _hex == _node_hex, (_hex == _node_hex) ? "" : $"GameMaker: {_hex}");
+
 #endregion
 
 #region ---- Network checks (driven from Step) --------------------------------------

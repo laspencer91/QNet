@@ -354,7 +354,24 @@ function QSerializer(_message_types) constructor
 	{
 		switch (_codec.kind)
 		{
-			case 0: return string(_codec.buffer_type);
+			case 0:
+				// Names, not GameMaker's numeric constants, so other implementations can compute the same hash.
+				switch (_codec.buffer_type)
+				{
+					case buffer_u8:     return "u8";
+					case buffer_s8:     return "s8";
+					case buffer_u16:    return "u16";
+					case buffer_s16:    return "s16";
+					case buffer_u32:    return "u32";
+					case buffer_s32:    return "s32";
+					case buffer_u64:    return "u64";
+					case buffer_f16:    return "f16";
+					case buffer_f32:    return "f32";
+					case buffer_f64:    return "f64";
+					case buffer_bool:   return "bool";
+					case buffer_string: return "string";
+				}
+				return "?";
 			case 1: return "[" + __CodecString(_codec.element) + "]";
 			case 2: return _codec.message_type.name;
 		}

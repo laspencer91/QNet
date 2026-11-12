@@ -1,6 +1,6 @@
 # QNet
 
-_STATUS_: 2.0 in progress. The GameMaker library is complete; QNet-Node is being updated to the 2.0 wire format.
+_STATUS_: 2.0. Wire-compatible with [QNet-Node](https://github.com/laspencer91/QNet-Node) 2.0 (branch `v2`), so a Node server can host GameMaker clients.
 
 QNet is a UDP networking library for GameMaker. You declare messages as plain constructors, choose how each one is delivered, and QNet handles connections, serialization, acknowledgements, resending and ordering.
 
