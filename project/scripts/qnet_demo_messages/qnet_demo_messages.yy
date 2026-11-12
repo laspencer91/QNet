@@ -1,11 +1,11 @@
 {
   "resourceType": "GMScript",
   "resourceVersion": "1.0",
-  "name": "__qnet_system_serializables",
+  "name": "qnet_demo_messages",
   "isCompatibility": false,
   "isDnD": false,
   "parent": {
-    "name": "QNetworkManager",
-    "path": "folders/QNet/QNetworkManager.yy",
+    "name": "TESTING",
+    "path": "folders/TESTING.yy",
   },
 }

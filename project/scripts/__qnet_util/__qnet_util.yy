@@ -1,11 +1,11 @@
 {
   "resourceType": "GMScript",
   "resourceVersion": "1.0",
-  "name": "__q_simple_timesource",
+  "name": "__qnet_util",
   "isCompatibility": false,
   "isDnD": false,
   "parent": {
-    "name": "QTimesource",
-    "path": "folders/QNet/QTimesource.yy",
+    "name": "QNet",
+    "path": "folders/QNet.yy",
   },
 }

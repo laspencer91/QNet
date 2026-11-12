@@ -1,510 +1,409 @@
 /*******************************************************************************************************************
-*   ______          _______. _______ .______       __       ___       __       __   ________   _______ .______      
-*  /  __  \        /       ||   ____||   _  \     |  |     /   \     |  |     |  | |       /  |   ____||   _  \     
-* |  |  |  |      |   (----`|  |__   |  |_)  |    |  |    /  ^  \    |  |     |  | `---/  /   |  |__   |  |_)  |    
-* |  |  |  |       \   \    |   __|  |      /     |  |   /  /_\  \   |  |     |  |    /  /    |   __|  |      /     
+*   ______          _______. _______ .______       __       ___       __       __   ________   _______ .______
+*  /  __  \        /       ||   ____||   _  \     |  |     /   \     |  |     |  | |       /  |   ____||   _  \
+* |  |  |  |      |   (----`|  |__   |  |_)  |    |  |    /  ^  \    |  |     |  | `---/  /   |  |__   |  |_)  |
+* |  |  |  |       \   \    |   __|  |      /     |  |   /  /_\  \   |  |     |  |    /  /    |   __|  |      /
 * |  `--'  '--..----)   |   |  |____ |  |\  \----.|  |  /  _____  \  |  `----.|  |   /  /----.|  |____ |  |\  \----.
 *  \_____\_____\_______/    |_______|| _| `._____||__| /__/     \__\ |_______||__|  /________||_______|| _| `._____|
 *
-*********************************************************************************************************************/                                                                                                           
+*  Turns registered structs into bytes and back.
+*
+*  A message type is a constructor whose arguments default to the type of each field:
+*
+*      function PlayerMove(_x = buffer_s16, _y = buffer_s16) constructor
+*      {
+*          x = _x;
+*          y = _y;
+*      }
+*
+*  Field types can be:
+*      buffer_u8 ... buffer_u64, buffer_f16/f32/f64, buffer_bool, buffer_string
+*      [type]            an array of that type (length is written as a u16, so up to 65535 items)
+*      OtherMessage      a nested registered struct
+*      [[type]], [Other] arrays nest freely
+*
+*  Fields are written in alphabetical order of their names, so every peer (GameMaker or Node)
+*  agrees on the layout no matter what order the runtime reports struct variables in.
+*
+*  For full control, add MANUAL_SERIALIZATION and write Write(buffer) / Read(buffer) yourself.
+*********************************************************************************************************************/
 
 /// feather ignore all
 
-#region --------------------------------- MACROS ---------------------------------
-
-// Each serialized buffer includes an identifier as its first piece of data.
-// Configuring this can open space for more identifiers. DEFAULT = buffer_u8 (255 MAXIMUM serializable_ids)
-#macro SERIALIZABLE_ID_BUFFER_TYPE buffer_u8
-// Custom Buffer Type Identifier
-#macro CUSTOM_BUFFER_SERIALIZER 15
-// Manual Serializer Macro
+// Put this as the first line of a message constructor to serialize it yourself with Write(buffer) and Read(buffer).
 #macro MANUAL_SERIALIZATION static __use_manual_serialization = true
 
-#endregion -----------------------------------------------------------------------
-
-#region ----------------------------- LOGGING MESSAGES ---------------------------
-#macro __QSERIALIZER_STRING_SERIALIZATION_EXAMPLE @"function ExampleStruct(_xx) constructor 
-{ 
+#macro __QSERIALIZER_MANUAL_EXAMPLE @"function ExampleMessage(_value = 0) constructor
+{
 	MANUAL_SERIALIZATION
-	
-	xx = _xx; 
-	
-	OnReceive = function() 
+
+	value = _value;
+
+	static Write = function(_buffer)
 	{
-		show_debug_message(xx);
+		buffer_write(_buffer, buffer_u16, value);
 	}
-	
-	Write = function(_buffer) 
+
+	static Read = function(_buffer)
 	{
-		buffer_write(_buffer, buffer_u16, xx);
-	}
-	
-	Read = function(_buffer) 
-	{
-		xx = buffer_write(_buffer, buffer_u16);
+		value = buffer_read(_buffer, buffer_u16);
 	}
 }"
-#endregion ----------------------------------------------------------------------
 
-/// @param {Array} _structs Array of Struct Ids that the Serializer handles. All Struct types used during serialization should be included here.
-/// @param {Struct,Undefined} _header_config Configuration for serializing additional header types. Only base gm buffer types are supported. EX: { reliable: buffer_u8, id: buffer_u16 }
-function QSerializerConfiguration(_structs, _header_config = {}) constructor
+/// Serializes and deserializes registered message structs.
+/// Every peer must register the same messages in the same order: a message's position in the
+/// array is its id on the wire.
+/// @param {Array<Function>} _message_types Constructors, e.g. [PlayerMove, ChatMessage]. Nested struct types must be included too.
+function QSerializer(_message_types) constructor
 {
-	header_config = _header_config;
-	structs = _structs;
-}
+	// Message type records, indexed by wire id.
+	__types_by_id = [];
+	// Message type records, keyed by constructor name.
+	__types_by_name = {};
 
-/// Contains serialization configuration for QSerializer, for a specific Struct.
-/// @param {Id.Struct} _struct_id The GM Struct ID is used to create instances of the Struct during serialization.
-/// @param {Array} _data_types The array of types that is iterated through, used to serialize and deserialize data.
-/// @param {Bool} _uses_manual_serialization If true, this struct should be set up with the correct Read and Write functions to manually serialize data.
-function __QStructSerializationConfig(_struct_id, _data_types, _uses_manual_serialization) constructor 
-{
-	struct_id  = _struct_id;
-	data_types = _data_types;
-	uses_manual_serialization = _uses_manual_serialization;
-}
+	/// Hash of every registered type and field. Peers with different hashes cannot understand each other.
+	schema_hash = 0;
 
-/// Class containing methods for serialization and deserialization of Structs.
-/// @param {Struct.QSerializerConfiguration} _configuration new QSerializerConfiguration([Struct1, Struct2, ...], { custom_header_prop: buffer_u8 });
-function QSerializer(_configuration) constructor
-{
-	#region --------------------------------- Initialization ---------------------------------
-	
-	// Auto incremented counter for assigning packet ids.
-	__next_serializable_id = 0;
-	// Maps a GM Struct ID to a QSerializer ID assigned to that struct.
-	__struct_id_to_serializable_id_map = ds_map_create();
-	// Maps a QSerializer ID to its QStructSerializationConfig.
-	__struct_serialization_config_map  = ds_map_create();
-	
-	if (!struct_exists(_configuration, "structs"))
+	#region ---- Public --------------------------------------------------------------------
+
+	/// Writes a message (its type id, then its fields) at the buffer's current position.
+	/// @param {Id.Buffer} _buffer
+	/// @param {Struct} _message An instance of a registered message type.
+	static Write = function(_buffer, _message)
 	{
-		q_error("Cannot initialize QSerializer without a structs array.",
-				   "Include a structs property as an array when declaring your QSerializer instance.",
-				   "new QSerializer({ structs: [ExampleStruct] })");
+		if (!is_struct(_message))
+		{
+			q_error($"Tried to send {_message}, which is not a struct.",
+			        ["Did you forget the keyword 'new'?", "Messages are instances of a registered constructor."],
+			        "connection.Send(new PlayerMove(x, y));");
+		}
+		var _type = __types_by_name[$ instanceof(_message)];
+		if (_type == undefined)
+		{
+			q_error($"{instanceof(_message)} is not a registered message type.",
+			        "Add it to the messages array when creating the QNetwork or QSerializer.",
+			        "new QNetwork({ messages: [" + instanceof(_message) + ", ...] });");
+		}
+		buffer_write(_buffer, buffer_u8, _type.id);
+		__WriteBody(_buffer, _type, _message);
 	}
-	
-	// Initialize the header config. This will be used to read / write header data into a buffer on each request.
-	__header_serialization_config = variable_struct_get(_configuration, "header_config") != undefined 
-								      ? _configuration.header_config 
-								      : undefined;
-	
-	// A QSerializer header ALWAYS contains a Struct Identifier. This is not a GM Struct Identifier. It is an identifier
-	// generated by QSerializer to minimize header byte size.
-	__HEADER_SIZE = buffer_sizeof(SERIALIZABLE_ID_BUFFER_TYPE);
-	
-	// Calculate header size, and pre-cache header prop names for serialization.
-	if (!is_undefined(__header_serialization_config))
+
+	/// Reads one message at the buffer's current position.
+	/// Throws if the data is malformed; returns undefined if the type id is unknown.
+	/// @param {Id.Buffer} _buffer
+	/// @returns {Struct,Undefined}
+	static Read = function(_buffer)
 	{
-		__header_prop_names = variable_struct_get_names(__header_serialization_config);
-		struct_foreach(__header_serialization_config, function(_field_name, _buffer_type) {
-			__HEADER_SIZE += buffer_sizeof(_buffer_type);
-		});
+		var _id = buffer_read(_buffer, buffer_u8);
+		if (_id >= array_length(__types_by_id)) return undefined;
+		return __ReadBody(_buffer, __types_by_id[_id]);
 	}
-	
-	// Register the list of structs sent into the constructors configuratiion
-	for (var _i = 0; _i < array_length(_configuration.structs); _i++)
+
+	/// Serializes a message into a new buffer, sized exactly. You must buffer_delete() it.
+	/// @param {Struct} _message
+	/// @returns {Id.Buffer}
+	static Serialize = function(_message)
 	{
-		__RegisterSerializable(_configuration.structs[_i]);
-	}
-	
-	#endregion -----------------------------------------------------------------------
-
-	#region ------------------------------ Serialize/Deserialize -----------------------------
-
-	/// @desc Creates a buffer and writes it by serializing the struct
-	/// @param {Struct} _struct_instance An instance of a struct that is recognized by QSerializer by registration.
-	/// @param {Struct} _header_data A struct containing data to be encoded into the header of the serialized packet.
-	/// @returns {Id.Buffer,undefined} Buffer with serialized data written. Or undefined(-10) if it could not be written.
-	function Serialize(_struct_instance, _header_data = {}) 
-	{	
-		if (!is_struct(_struct_instance))
-		{
-			q_error($"Error attempting to execute Serialize({_struct_instance}). \nNo struct instance was provided to be serialized.", 
-					   ["Did you forget the keyword 'new'?", "Make sure you are attempting to send an instance of a struct."], 
-					   "Serialize(new SomeStruct(10, 30.2))");
-		}
-	
-		var _struct_id = asset_get_index(instanceof(_struct_instance));
-		var _serializable_id = __struct_id_to_serializable_id_map[? _struct_id];
-
-		if (_serializable_id == undefined)
-		{
-			q_error($"NO ID FOUND FOR STRUCT: {instanceof(_struct_instance)}", 
-						"Is it registered with QSerializer via new QSerializer([])?",
-			            "new QSerializer([Struct1, Struct2, YourStructName])");
-		}
-
-		// Array of data types that were registered with packet_layout_register
-		var _serialization_config = __struct_serialization_config_map[? _serializable_id];
-		var _data_types = _serialization_config.data_types;
-
-		if (_serialization_config == undefined)
-		{
-			q_error($"There is no registered serialization config for packet type: {_serializable_id}",
-			            "This is a bug and should be reported. \nEmail: laspencer@live.com \nI will response as quickly as possible.",
-						"__struct_serialization_config_map[? _serializable_id] should contain the configuration for your serializable struct.");
-		}
-
-		// Create buffer and write packet identifier
-		var _buffer = buffer_create(1, buffer_grow, 1);
-		buffer_write(_buffer, SERIALIZABLE_ID_BUFFER_TYPE, _serializable_id);
-		
-		// WRITE HEADER AS CONFIGURED IN CONSTRUCTION OF THE SERIALIZER
-		if (!is_undefined(__header_serialization_config))
-		{
-			for (var _i = 0; _i < array_length(__header_prop_names); _i++)
-			{
-				var _header_field_name = __header_prop_names[_i];
-				var _header_field_data_type = __header_serialization_config[$ _header_field_name];
-				buffer_write(_buffer, _header_field_data_type, _header_data[$ _header_field_name]);
-			}
-		}
-		q_log($"[WRITING] BUFFER TELL AFTER HEADER {buffer_tell(_buffer)}", QLOG_LEVEL.DEEP_DEBUG);
-
-		// WRITE DATA FROM STRUCT
-		if (_serialization_config.uses_manual_serialization)
-		{
-			// USES MANUAL SERIALIZATION
-			try 
-			{
-				_struct_instance.Write(_buffer);
-			} 
-			catch(_exception) 
-			{
-				if (string_pos("<unknown_object>.Write", _exception.message))
-				{
-					q_error($"[UNIMPLEMENTED] {instanceof(_struct_instance)}.Write() may be unimplemented.",
-					            ["You have marked a registered a struct with MANUAL_SERIALIZATION.", "This struct requires a Write() function to be implemented."],
-								__QSERIALIZER_STRING_SERIALIZATION_EXAMPLE);
-				}
-				else
-				{
-					show_error(_exception.longMessage, false);	
-				}
-			}
-		}
-		else
-		{
-			// USES BUILD IN SERIALIZATION
-			__StructToBuffer(_buffer, _struct_id, _struct_instance);	// Recursive
-		}
-
+		var _buffer = buffer_create(64, buffer_grow, 1);
+		Write(_buffer, _message);
 		buffer_resize(_buffer, buffer_tell(_buffer));
-
 		return _buffer;
 	}
-	
-	/// Deserializes data in a buffer to a registered struct instance.
-	/// @param {Id.Buffer} _buffer A buffer with data to be deserialized. For example, a received network packet./
-	/// @returns {Struct, undefined}
-	function Deserialize(_buffer)
+
+	/// Deserializes a whole buffer produced by Serialize(). Returns undefined if it cannot be read.
+	/// @param {Id.Buffer} _buffer
+	/// @returns {Struct,Undefined}
+	static Deserialize = function(_buffer)
 	{
 		buffer_seek(_buffer, buffer_seek_start, 0);
-
-		// Read serializable_id (packet identifier). This will allow us to lookup the type of data to expect.	
-		var _serializable_id = buffer_read(_buffer, SERIALIZABLE_ID_BUFFER_TYPE);
-		var _header_data = {}
-		
-		q_log($"[READING] BUFFER TELL BEFORE HEADER {buffer_tell(_buffer)}", QLOG_LEVEL.DEEP_DEBUG);
-		if (!is_undefined(__header_serialization_config))
+		try
 		{
-			for (var _i = 0; _i < array_length(__header_prop_names); _i++)
-			{
-				var _header_field_name = __header_prop_names[_i];
-				var _header_field_data_type = __header_serialization_config[$ _header_field_name];
-				_header_data[$ _header_field_name] = buffer_read(_buffer, _header_field_data_type);
-			}
+			return Read(_buffer);
 		}
-		q_log($"[READING] BUFFER TELL AFTER HEADER {buffer_tell(_buffer)}", QLOG_LEVEL.DEEP_DEBUG);
-		
-		// Retrieve configuration for the identified struct.
-		var _serialization_config = __struct_serialization_config_map[? _serializable_id];
-		if (_serialization_config == undefined)
+		catch (_exception)
 		{
-			q_error_quiet($"Attempted to process an unrecognized serializable_id ({_serializable_id}). If you are receiving data from external sources (networking), they could have passed incorrect data.");
+			q_error_quiet($"Could not deserialize buffer: {_exception.message}");
 			return undefined;
 		}
+	}
 
-		if (_serialization_config.uses_manual_serialization)
+	/// True if _message_type (a constructor) is registered.
+	static IsRegistered = function(_message_type)
+	{
+		var _name = __qnet_function_name(_message_type);
+		return _name != undefined && variable_struct_exists(__types_by_name, _name);
+	}
+
+	#endregion
+
+	#region ---- Writing ------------------------------------------------------------------
+
+	static __WriteBody = function(_buffer, _type, _message)
+	{
+		if (_type.manual)
 		{
-			var _struct_instance = new _serialization_config.struct_id();
-		
-			try 
-			{
-				_struct_instance.Read(_buffer);
-			} 
-			catch(_exception) 
-			{
-				if (string_pos("<unknown_object>.Read", _exception.message))
+			_message.Write(_buffer);
+			return;
+		}
+		var _fields = _type.fields;
+		var _codecs = _type.codecs;
+		for (var _i = 0; _i < array_length(_fields); _i++)
+		{
+			__WriteValue(_buffer, _codecs[_i], _message[$ _fields[_i]], _type, _fields[_i]);
+		}
+	}
+
+	static __WriteValue = function(_buffer, _codec, _value, _type, _field)
+	{
+		switch (_codec.kind)
+		{
+			case 0: // primitive
+				if (_codec.buffer_type == buffer_string)
 				{
-					q_error($"[UNIMPLEMENTED] {instanceof(_struct_instance)}.Read() may be unimplemented.",
-								["You have marked a registered a struct with MANUAL_SERIALIZATION.", "This struct requires a Read() function to be implemented."],
-								__QSERIALIZER_STRING_SERIALIZATION_EXAMPLE);
+					if (!is_string(_value)) __FieldError(_type, _field, "a string", _value);
 				}
-				else
+				else if (!is_numeric(_value))
 				{
-					show_error(_exception.longMessage, false);	
+					__FieldError(_type, _field, "a number", _value);
 				}
+				buffer_write(_buffer, _codec.buffer_type, _value);
+				break;
+
+			case 1: // array
+				if (!is_array(_value)) __FieldError(_type, _field, "an array", _value);
+				var _length = array_length(_value);
+				if (_length > 65535) __FieldError(_type, _field, "an array of at most 65535 items", $"{_length} items");
+				buffer_write(_buffer, buffer_u16, _length);
+				for (var _i = 0; _i < _length; _i++)
+				{
+					__WriteValue(_buffer, _codec.element, _value[_i], _type, _field);
+				}
+				break;
+
+			case 2: // nested struct
+				if (!is_struct(_value)) __FieldError(_type, _field, $"a {_codec.message_type.name} struct", _value);
+				__WriteBody(_buffer, _codec.message_type, _value);
+				break;
+		}
+	}
+
+	static __FieldError = function(_type, _field, _expected, _value)
+	{
+		q_error($"{_type.name}.{_field} should be {_expected}, but it is {typeof(_value)}: {_value}",
+		        ["Check the arguments passed to the constructor.", "A field left at its default holds its buffer type, not data."],
+		        $"new {_type.name}(...)");
+	}
+
+	#endregion
+
+	#region ---- Reading ------------------------------------------------------------------
+
+	static __ReadBody = function(_buffer, _type)
+	{
+		var _ctor = _type.ctor;
+		var _message = new _ctor();
+		if (_type.manual)
+		{
+			_message.Read(_buffer);
+			return _message;
+		}
+		var _fields = _type.fields;
+		var _codecs = _type.codecs;
+		for (var _i = 0; _i < array_length(_fields); _i++)
+		{
+			_message[$ _fields[_i]] = __ReadValue(_buffer, _codecs[_i]);
+		}
+		return _message;
+	}
+
+	static __ReadValue = function(_buffer, _codec)
+	{
+		switch (_codec.kind)
+		{
+			case 0:
+				return buffer_read(_buffer, _codec.buffer_type);
+
+			case 1:
+				var _length = buffer_read(_buffer, buffer_u16);
+				// Every element takes at least one byte except empty structs, so a length larger
+				// than what is left in the buffer can only be garbage.
+				if (_length > buffer_get_size(_buffer) - buffer_tell(_buffer) && !_codec.element.may_be_empty)
+				{
+					throw("QSerializer: array length exceeds remaining data");
+				}
+				var _array = array_create(_length);
+				for (var _i = 0; _i < _length; _i++)
+				{
+					_array[_i] = __ReadValue(_buffer, _codec.element);
+				}
+				return _array;
+
+			case 2:
+				return __ReadBody(_buffer, _codec.message_type);
+		}
+		return undefined;
+	}
+
+	#endregion
+
+	#region ---- Registration -------------------------------------------------------------
+
+	static __PRIMITIVE_TYPES = [buffer_u8, buffer_s8, buffer_u16, buffer_s16, buffer_u32, buffer_s32, buffer_u64,
+	                            buffer_f16, buffer_f32, buffer_f64, buffer_bool, buffer_string];
+
+	static __Register = function(_ctor)
+	{
+		var _name = __qnet_function_name(_ctor);
+		if (_name == undefined)
+		{
+			q_error($"Cannot register {_ctor} as a message type.",
+			        ["Pass the constructor itself, not an instance or a call.", "Message types are declared with: function Name(...) constructor { }"],
+			        "new QNetwork({ messages: [PlayerMove, ChatMessage] });");
+		}
+		if (variable_struct_exists(__types_by_name, _name))
+		{
+			q_error($"{_name} is registered twice.", "Each message type can appear in the list only once.", "messages: [PlayerMove, ChatMessage]");
+		}
+
+		var _sample = new _ctor();
+		var _type = {
+			id:     array_length(__types_by_id),
+			name:   _name,
+			ctor:   _ctor,
+			manual: false,
+			fields: [],
+			declared: [],
+			codecs: [],
+			has_on_receive: false,
+		};
+
+		// Statics are not visible to variable_struct_get_names, so look these up directly.
+		try { _type.manual = (_sample.__use_manual_serialization == true); } catch (_e1) { _type.manual = false; }
+		try { _type.has_on_receive = is_callable(_sample.OnReceive); } catch (_e2) { _type.has_on_receive = false; }
+
+		if (_type.manual)
+		{
+			var _has_read = false, _has_write = false;
+			try { _has_read = is_callable(_sample.Read); } catch (_e3) {}
+			try { _has_write = is_callable(_sample.Write); } catch (_e4) {}
+			if (!_has_read || !_has_write)
+			{
+				q_error($"{_name} uses MANUAL_SERIALIZATION but is missing Read() or Write().",
+				        "Manual messages implement both Write(buffer) and Read(buffer).",
+				        __QSERIALIZER_MANUAL_EXAMPLE);
 			}
-		
-			return { struct: _struct_instance, header_data: _header_data };
 		}
 		else
-		{	
-			// Standard deserizalation
-			var _struct_id = _serialization_config.struct_id;
-	
-			// Get to the right place after serializable_id (which is the first byte)
-			buffer_seek(_buffer, buffer_seek_start, __HEADER_SIZE); // << Calculate header size
+		{
+			_type.fields = __qnet_struct_field_names(_sample);
+			for (var _i = 0; _i < array_length(_type.fields); _i++)
+			{
+				array_push(_type.declared, _sample[$ _type.fields[_i]]);
+			}
+		}
 
-			return { struct: __BufferToStruct(_buffer, _struct_id), header_data: _header_data };
-		}	
+		array_push(__types_by_id, _type);
+		__types_by_name[$ _name] = _type;
 	}
 
-	#endregion --------------------------------------------------------------------------------
-
-	#region -------------------------------- Private Utilities -------------------------------
-
-	/// Writes a struct to a buffer. The struct must be recognized by QSerializer.
-	/// Recursive  function, will end on a data type not being an array.
-	function __StructToBuffer(_buffer, _struct_id, _struct_instance)
+	// Second pass, after every type is registered, so nested types can appear in any order.
+	static __Compile = function(_type)
 	{
-		var _serializable_id = __struct_id_to_serializable_id_map[? _struct_id];
-		var _serialization_config = __struct_serialization_config_map[? _serializable_id];
-	
-		if (_serialization_config == undefined)
+		for (var _i = 0; _i < array_length(_type.declared); _i++)
 		{
-			q_error($"While attempting to write struct to a buffer, there is no registered serialization config for struct: {instanceof(_struct_instance)}.",
-			            "This struct should be included with new QSerializer(_configuration) configuration.",
-						"new QSerializer([ExampleStruct]);");
+			array_push(_type.codecs, __CompileType(_type.declared[_i], _type, _type.fields[_i]));
 		}
-	
-		var _serialization_config_data_types = _serialization_config.data_types;
-	
-		var _struct_field_names_array = struct_get_variable_names(_struct_instance);
-
-		for (var _a = 0; _a < array_length(_struct_field_names_array); _a++) 
-		{
-			var _field_name	  = _struct_field_names_array[_a];
-			var _data_type	  = _serialization_config_data_types[_a];
-			var _field_value  = _struct_instance[$ _field_name];
-			
-			q_log($"Writing data type {_data_type} to buffer.", QLOG_LEVEL.DEEP_DEBUG);
-		
-			if (_data_type == buffer_string && !is_string(_field_value))
-				q_log("When building a registered message, a string was expected but a 'real' number was passed.");	
-			if (is_string(_field_value) && _data_type != buffer_string)
-				q_log("When building a registered message, a string was passed in but a 'real' number was expected.");
-		
-			if (is_array(_data_type))
-			{
-				// Handles an array type
-				var _array_data_type = _data_type[0];
-			
-				if (_array_data_type == CUSTOM_BUFFER_SERIALIZER)
-				{
-					// Data type will be handled by a custom serializer.
-					var _serializer = _data_type[1];
-					if (_serializer == undefined) 
-					{ 
-						q_error("[PACKET WRITE] Custom buffer reader not setup correctly.",
-						           "Reader needs to be specified.", 
-								   "function ExampleStruct(datafield = [ CUSTOM_BUFFER_SERIALIZER, reader_function_name ]) constructor {"); 
-					}
-					_serializer.write(_buffer, _field_value);	// Pass the buffer and the data off to the custom serializer
-				}
-				else
-				{
-					// Data type is an Array of a Type
-					// We begin by writing the length of the array.
-					var _array_length = array_length(_field_value);
-					buffer_write(_buffer, buffer_u16, _array_length);
-				
-					if (__IsStruct(_array_data_type))
-					{
-						// The data type is an array of a Structs. Call this function recursively.
-						for (var _ei = 0; _ei < _array_length; _ei++) 
-						{
-							__StructToBuffer(_buffer, _array_data_type, _field_value[_ei]);
-						}
-					}
-					else 
-					{
-						// The data type is an array of "primitives" (buffer_u8, buffer_u16, etc...)
-						// Write the data into the buffer.
-						for (var _ei = 0; _ei < _array_length; _ei++) 
-						{
-							buffer_write(_buffer, _array_data_type, _field_value[_ei]);
-						}
-					}
-				}
-			}
-			else if (__IsStruct(_data_type)) 
-			{
-				// Handles writing of a single struct
-				__StructToBuffer(_buffer, _data_type, _field_value);
-			}
-			else
-			{
-				// Handles the writing of a single primitive (buffer_u8, buffer_u16, etc...) type.
-				buffer_write(_buffer, _data_type, _field_value);
-			}
-		}	
 	}
 
-	/// Produces a Struct from the data in a buffer.
-	/// @param {Id.Buffer} _buffer
-	/// @param {Id.Struct} _struct_type
-	function __BufferToStruct(_buffer, _struct_type) 
+	static __CompileType = function(_declared, _type, _field)
 	{
-		var _serializable_id = __struct_id_to_serializable_id_map[? _struct_type];
-		var _serialization_config = __struct_serialization_config_map[? _serializable_id];
-	
-		if (_serialization_config == undefined)
+		if (is_array(_declared))
 		{
-			q_error($"While attempting to read buffer to a struct, there is no registered serialization config for struct: {instanceof(_struct_type)}.",
-			            "This struct should be included with QSerializer([]).",
-						"new QSerializer([ExampleStruct]);");
-		}
-	
-		var _serialization_config_data_types = _serialization_config.data_types;
-	
-		// Read the buffer, one data type at a time, storing the read data into this array.
-		var _data = array_create(array_length(_serialization_config_data_types));
-		for (var _i = 0; _i < array_length(_serialization_config_data_types); _i++)
-		{
-			var _curr_field_datatype = _serialization_config_data_types[_i];
-		
-			q_log($"Reading data type {_curr_field_datatype} from buffer.", QLOG_LEVEL.DEEP_DEBUG);
-		
-			if (is_array(_curr_field_datatype))
+			if (array_length(_declared) != 1)
 			{
-				var _array_type = _curr_field_datatype[0];
-				if (_array_type == CUSTOM_BUFFER_SERIALIZER)
-				{
-					var _buffer_reader = _curr_field_datatype[1];
-					if (_buffer_reader == undefined) 
-					{ 
-						q_error("[PACKET READ] Custom buffer reader not setup correctly.", 
-						           "Reader needs to be specified.",
-								   "function ExampleStruct(_field = [ CUSTOM_BUFFER_SERIALIZER, reader_function_name ]) constructor {");
-					}
-				
-					_data[_i] = _buffer_reader.read(_buffer);
-				}
-				else 
-				{
-					var _num_of_array_entries = buffer_read(_buffer, buffer_u16);
-					var _sub_array		      = array_create(_num_of_array_entries, undefined);
-			
-					if (__IsStruct(_array_type))
-					{
-						// Read in an array of structs. Returns [FilledOutStructInstances]
-						for (var _ae = 0; _ae < _num_of_array_entries; _ae++) 
-						{
-							_sub_array[_ae] = __BufferToStruct(_buffer, _array_type);
-						}	
-					}
-					else
-					{
-						// Read in an array of Gamemaker types.
-						for (var _ae = 0; _ae < _num_of_array_entries; _ae++) 
-						{
-							_sub_array[_ae] = buffer_read(_buffer, _array_type);
-						}	
-					}
-			
-					_data[_i] = _sub_array;
-				}
+				q_error($"{_type.name}.{_field} declares an array with {array_length(_declared)} entries.",
+				        "Array fields declare a single element type.",
+				        "function Path(_points = [buffer_s16]) constructor { points = _points; }");
 			}
-			else if (__IsStruct(_curr_field_datatype))
-			{
-				_data[_i] = __BufferToStruct(_buffer, _curr_field_datatype);
-			}
-			else
-			{
-				_data[_i] = buffer_read(_buffer, _curr_field_datatype); // Read single data normally
-			}
-		}
-		// Construct the struct instance, piling all the previously read data into it.
-		var _struct_inst = new _struct_type(); // Data type is a struct, we create an instance. And fill it out.
-		var _field_names = struct_get_variable_names(_struct_inst);
-			
-		for (var _ei = 0; _ei < array_length(_data); _ei++) 
-		{
-			_struct_inst[$ _field_names[_ei]] = _data[_ei];
+			return { kind: 1, element: __CompileType(_declared[0], _type, _field), may_be_empty: false };
 		}
 
-		return _struct_inst;
+		if (is_numeric(_declared))
+		{
+			for (var _i = 0; _i < array_length(__PRIMITIVE_TYPES); _i++)
+			{
+				if (_declared == __PRIMITIVE_TYPES[_i]) return { kind: 0, buffer_type: _declared, may_be_empty: false };
+			}
+		}
+
+		var _name = __qnet_function_name(_declared);
+		if (_name != undefined && variable_struct_exists(__types_by_name, _name))
+		{
+			var _nested = __types_by_name[$ _name];
+			return { kind: 2, message_type: _nested, may_be_empty: (!_nested.manual && array_length(_nested.declared) == 0) };
+		}
+
+		q_error($"{_type.name}.{_field} has an unsupported type: {_declared}",
+		        ["Use a buffer type (buffer_u8, buffer_string, ...), an array like [buffer_u8], or a registered struct.",
+		         "buffer_text is not supported because it cannot be read back. Use buffer_string.",
+		         "Nested structs must also be in the messages list."],
+		        "function Spawn(_name = buffer_string, _pos = Vec2, _tags = [buffer_u8]) constructor { ... }");
 	}
 
-	/// Registers a serializable struct to this QSerializer. Assigns that struct an ID
-	/// @param {Function} _struct_id A struct to register. This should not be a function call "Struct()" but rather the id "Struct"
-	static __RegisterSerializable = function(_struct_id)
+	static __CodecString = function(_codec)
 	{
-		var _struct = new _struct_id();
-		var _struct_property_names = struct_get_variable_names(_struct);
-	
-		// If there is data we need to build the array
-		var _array_of_types = array_create(array_length(_struct_property_names));
-		for (var _i = 0; _i < array_length(_struct_property_names); _i++)
+		switch (_codec.kind)
 		{
-			var _data_type = _struct[$ _struct_property_names[_i]];
-			if (_data_type == CUSTOM_BUFFER_SERIALIZER)
-			{
-				// TODO: Find out if this is useable? Or needed? Don't remember writing this.
-				//       What does it do?
-				_array_of_types[_i] = [CUSTOM_BUFFER_SERIALIZER, _struct]; // The struct itself is flagged as having custom serialize functions to be used for this data.
-			}
-			else
-			{
-				_array_of_types[_i] = _data_type;		// The data type is a regular GM buffer type
-			}
+			case 0: return string(_codec.buffer_type);
+			case 1: return "[" + __CodecString(_codec.element) + "]";
+			case 2: return _codec.message_type.name;
 		}
-	
-		var _uses_manual_serialization = _struct[$ "__use_manual_serialization"] == true;
-		__struct_serialization_config_map[? __next_serializable_id] = new __QStructSerializationConfig(_struct_id, _array_of_types, _uses_manual_serialization);
-		__struct_id_to_serializable_id_map[? _struct_id] = __next_serializable_id;
-
-		show_debug_message($"[{_uses_manual_serialization ? "MANUAL" : "DEFAULT"} SERIALIZABLE STRUCT REGISTERED] {script_get_name(_struct_id)} with Serializable ID: {__next_serializable_id}");
-
-		return __next_serializable_id++;	
+		return "?";
 	}
 
-	/// Returns whether a given function id exists.
-	/// @param {Asset.GMScript} _number
-	static __IsStruct = function(_number) 
+	static __SchemaString = function()
 	{
-		if (_number > 100000 && script_exists(_number))
+		var _schema = $"qnet{QNET_PROTOCOL_VERSION}";
+		for (var _i = 0; _i < array_length(__types_by_id); _i++)
 		{
-			return true;
+			var _type = __types_by_id[_i];
+			_schema += $"|{_type.name}:";
+			if (_type.manual)
+			{
+				_schema += "manual";
+				continue;
+			}
+			for (var _f = 0; _f < array_length(_type.fields); _f++)
+			{
+				_schema += $"{_type.fields[_f]}={__CodecString(_type.codecs[_f])},";
+			}
 		}
-	
-		return false;
+		return _schema;
 	}
-	
-	#endregion -----------------------------------------------------------------------
+
+	#endregion
+
+	#region ---- Construction -------------------------------------------------------------
+
+	if (!is_array(_message_types))
+	{
+		q_error("QSerializer needs an array of message constructors.", "Pass the constructors themselves.", "new QSerializer([PlayerMove, ChatMessage])");
+	}
+	if (array_length(_message_types) > 256)
+	{
+		q_error("QSerializer supports at most 256 message types.", "Combine related messages, or use a type field inside one message.", "");
+	}
+	for (var _i = 0; _i < array_length(_message_types); _i++)
+	{
+		__Register(_message_types[_i]);
+	}
+	for (var _i = 0; _i < array_length(__types_by_id); _i++)
+	{
+		__Compile(__types_by_id[_i]);
+	}
+	schema_hash = __qnet_hash_u32(__SchemaString());
+
+	q_log($"QSerializer registered {array_length(__types_by_id)} message types (schema {schema_hash})", QLOG_LEVEL.DEBUG);
+
+	#endregion
 }
-
-
-#region ------------------------ Global Utility Functions ----------------------------
-///@desc Ommits method names. Gets property field names only.
-///@param {Struct} _struct
-function struct_get_variable_names(_struct) 
-{
-	var _field_names = variable_struct_get_names(_struct);
-
-	var _filtered_array = [];
-	for (var _i = 0; _i < array_length(_field_names); _i++) 
-	{
-		var _type = typeof(variable_struct_get(_struct, _field_names[_i]));
-		if (_type != "method") 
-		{
-			array_push(_filtered_array, _field_names[_i]);
-		}
-	}
-	return _filtered_array;
-}
-#endregion -----------------------------------------------------------------------

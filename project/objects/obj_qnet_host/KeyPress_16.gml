@@ -1,3 +1,0 @@
-/// @description Shutdown
-
-network.Shutdown();

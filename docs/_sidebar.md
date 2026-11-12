@@ -1,3 +1,5 @@
 - [**Introduction**](#introduction)
 - [**Installation**](#installation)
 - [**At A Glance**](#at-a-glance)
+- [**How it works**](#how-it-works)
+- [**Wire protocol**](PROTOCOL.md)

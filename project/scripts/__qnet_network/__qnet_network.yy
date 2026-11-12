@@ -1,11 +1,11 @@
 {
   "resourceType": "GMScript",
   "resourceVersion": "1.0",
-  "name": "__qnetwork_manager",
+  "name": "__qnet_network",
   "isCompatibility": false,
   "isDnD": false,
   "parent": {
-    "name": "QNetworkManager",
-    "path": "folders/QNet/QNetworkManager.yy",
+    "name": "QNet",
+    "path": "folders/QNet.yy",
   },
 }

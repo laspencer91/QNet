@@ -1,0 +1,2 @@
+/// @description Networking
+network.AsyncNetworking();
